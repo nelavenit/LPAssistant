@@ -1,0 +1,13 @@
+{
+  "name": "Simplex Assistant",
+  "short_name": "Simplex Assistant",
+  "description": "A manual simplex tableau trainer with exact rational arithmetic.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3f6f3",
+  "theme_color": "#155f4b",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
