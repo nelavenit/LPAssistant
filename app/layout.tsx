@@ -13,15 +13,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Simplex Assistant",
-  description: "A manual simplex tableau trainer with exact rational arithmetic and Phase I.",
-  manifest: "/manifest.webmanifest",
+  title: "Simplex Assistant | LPAssistant",
+  description: "The first LPAssistant application: a manual simplex tableau trainer with exact rational arithmetic and Phase I.",
+  manifest: "./manifest.webmanifest",
   other: {
     "codex-preview": "development",
   },
   icons: {
-    icon: "/icon.svg",
-    shortcut: "/icon.svg",
+    icon: "./icon.svg",
+    shortcut: "./icon.svg",
   },
 };
 

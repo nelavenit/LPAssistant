@@ -122,7 +122,7 @@ export function PivotInspector({
 
       {!row || !variable || !value ? (
         <div className="empty-inspector">
-          <div className="pivot-glyph"><span /></div>
+          <div className="pivot-glyph" aria-hidden="true"><span /></div>
           <h3>Hover to inspect</h3>
           <p>Move over a nonzero entry to see its exact ratio, then click the cell to pivot immediately.</p>
         </div>
@@ -151,20 +151,20 @@ export function PivotInspector({
                 <span><NumberValue value={value} display={display} /></span>
               </span>
               <span>=</span>
-              <strong>{ratio ? <NumberValue value={ratio} display={display} /> : 'undefined'}</strong>
+              <span className="ratio-result">{ratio ? <NumberValue value={ratio} display={display} /> : 'undefined'}</span>
             </div>
             {algorithm === 'primal' && !primalEligible && (
               <p className="ratio-warning">This entry is not eligible for the usual nonnegative primal ratio test.</p>
             )}
           </section>
 
-          <p className="operation-note">Clicking this cell divides its row by <strong>{value.toFraction()}</strong>, then removes the pivot-column multiples from every other row and the objective row.</p>
+          <p className="operation-note">Clicking this cell divides its row by <span>{value.toFraction()}</span>, then removes the pivot-column multiples from every other row and the objective row.</p>
         </>
       )}
 
       <div className="quiet-note algorithm-note"><InfoIcon /><span>{algorithm === 'primal'
-        ? 'Primal shows RHS / aᵢⱼ down an entering column to compare leaving rows.'
-        : 'Dual shows cⱼ / aᵢⱼ across a chosen leaving row to compare entering columns. The row operation itself is unchanged.'}</span></div>
+        ? <>Primal shows RHS / a<sub>i,j</sub> down an entering column to compare leaving rows.</>
+        : <>Dual shows c<sub>j</sub> / a<sub>i,j</sub> across a chosen leaving row to compare entering columns. The row operation itself is unchanged.</>}</span></div>
     </aside>
   );
 }

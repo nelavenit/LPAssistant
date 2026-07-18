@@ -1,5 +1,6 @@
-const CACHE = 'simplex-assistant-shell-v8';
-const CORE = ['/', '/manifest.webmanifest', '/icon.svg'];
+const CACHE = 'simplex-assistant-shell-v9';
+const CORE = ['./', 'manifest.webmanifest', 'icon.svg']
+  .map((path) => new URL(path, self.registration.scope).href);
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(CORE)).then(() => self.skipWaiting()));

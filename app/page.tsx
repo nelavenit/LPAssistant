@@ -27,7 +27,7 @@ export default function Home() {
 
     navigator.serviceWorker.addEventListener('controllerchange', adoptUpdate);
     navigator.serviceWorker
-      .register('/sw.js', { updateViaCache: 'none' })
+      .register(new URL('sw.js', window.location.href), { updateViaCache: 'none' })
       .then((registration) => registration.update())
       .catch(() => undefined);
 

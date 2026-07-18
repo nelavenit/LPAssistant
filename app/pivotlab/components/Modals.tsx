@@ -141,7 +141,7 @@ export function SettingsModal({ settings, onChange, onClose }: SettingsModalProp
   }, [settings.shortcuts]);
 
   return (
-    <Modal title="Settings" eyebrow="Appearance and controls" onClose={onClose} wide>
+    <Modal title="Settings" onClose={onClose} wide>
       <div className="modal-body settings-grid">
         <section className="settings-section">
           <h3>Appearance</h3>
@@ -162,8 +162,9 @@ export function SettingsModal({ settings, onChange, onClose }: SettingsModalProp
           </label>
           <section className="about-simplex-assistant">
             <span className="eyebrow">About</span>
-            <h3>Simplex Assistant 0.5.0</h3>
-            <p>A manual simplex-method practice tool: every pivot decision stays yours, and zero entries are the only forbidden pivots.</p>
+            <h3>Simplex Assistant 0.6.0</h3>
+            <p>The first application in LPAssistant, an expandable collection of interactive linear-programming learning tools.</p>
+            <p>This manual simplex-method practice tool keeps every pivot decision yours; only zero entries are forbidden.</p>
             <p>All calculations use arbitrary-precision rational arithmetic.</p>
           </section>
         </section>
@@ -211,15 +212,26 @@ interface ExportModalProps {
   history: HistoryEntry[];
   currentIndex: number;
   display: NumberDisplay;
+  includeResult: boolean;
+  onIncludeResultChange: (include: boolean) => void;
   onClose: () => void;
   onNotice: (message: string) => void;
   onPrintHistory: (includeResult: boolean) => void;
 }
 
-export function ExportModal({ tableau, history, currentIndex, display, onClose, onNotice, onPrintHistory }: ExportModalProps) {
+export function ExportModal({
+  tableau,
+  history,
+  currentIndex,
+  display,
+  includeResult,
+  onIncludeResultChange,
+  onClose,
+  onNotice,
+  onPrintHistory,
+}: ExportModalProps) {
   const [format, setFormat] = useState<ExportFormat>('latex');
   const [imageExporting, setImageExporting] = useState<'png' | 'transparent-png' | 'svg' | null>(null);
-  const [includeResult, setIncludeResult] = useState(true);
   const content = format === 'latex'
     ? exportLatex(tableau)
     : format === 'markdown'
@@ -259,7 +271,7 @@ export function ExportModal({ tableau, history, currentIndex, display, onClose, 
     }
   };
   return (
-    <Modal title="Export tableau" eyebrow="For notes and problem sets" onClose={onClose} wide>
+    <Modal title="Export solution" onClose={onClose} wide>
       <div className="modal-body export-layout">
         <div className="export-options">
           <div className="format-tabs" role="tablist">
@@ -275,14 +287,14 @@ export function ExportModal({ tableau, history, currentIndex, display, onClose, 
         </div>
         <div className="export-actions-panel">
           <label className="export-result-toggle">
-            <input type="checkbox" checked={includeResult} onChange={(event) => setIncludeResult(event.target.checked)} />
+            <input type="checkbox" checked={includeResult} onChange={(event) => onIncludeResultChange(event.target.checked)} />
             <span className="custom-checkbox"><CheckIcon /></span>
             <span><strong>Include final result</strong><small>Append f<sub>min</sub> and the decision-variable point to PDF, PNG, and SVG.</small></span>
           </label>
-          <div className="export-action-card"><strong>Complete solution history</strong><span>Print every tableau with marked pivots. Choose “Save as PDF” in the Windows print dialog.</span><button className="secondary-button" type="button" onClick={() => onPrintHistory(includeResult)}>Print / PDF</button></div>
+          <div className="export-action-card"><strong>Complete solution PDF</strong><span>Print the complete solution sequence with exact fractions and marked pivots, or save it as PDF from your browser’s print dialog.</span><button className="secondary-button" type="button" onClick={() => onPrintHistory(includeResult)}>Print / PDF</button></div>
           <div className="export-action-card">
             <strong>Complete solution image</strong>
-            <span>Export the complete pivot sequence with exact fractions and marked pivots.</span>
+            <span>Export the complete solution sequence with exact fractions and marked pivots as PNG or SVG.</span>
             <div className="image-export-buttons">
               <button className="secondary-button" type="button" disabled={imageExporting !== null} onClick={() => void exportImage('png')}>{imageExporting === 'png' ? 'Creating…' : 'PNG'}</button>
               <button className="secondary-button" type="button" disabled={imageExporting !== null} onClick={() => void exportImage('transparent-png')}>{imageExporting === 'transparent-png' ? 'Creating…' : 'PNG · no background'}</button>
