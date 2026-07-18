@@ -1,10 +1,10 @@
 # LPAssistant
 
-LPAssistant is an open-ended project for interactive linear-programming learning tools. Its first application is **Simplex Assistant**, a modern manual simplex-tableau trainer inspired by the LPAssistant app that accompanied Paul R. Thie and G. E. Keough's *An Introduction to Linear Programming and Game Theory*.
+LPAssistant is an open-ended umbrella project for interactive linear-programming learning tools. It is designed to contain multiple focused applications. Its first—and currently only—application is **Simplex Assistant**, a modern manual simplex-tableau trainer inspired by the LPAssistant app that accompanied Paul R. Thie and G. E. Keough's *An Introduction to Linear Programming and Game Theory*.
 
 **Live application:** [Simplex Assistant](https://pivotlab-simplex.valbor2002.chatgpt.site)
 
-## Simplex Assistant 0.5.0
+## Simplex Assistant 0.6.0
 
 Simplex Assistant is deliberately not an automatic solver. The user is able to choose any nonzero pivot; the application performs exactly one pivot transformation and records the resulting tableau.
 
@@ -15,7 +15,7 @@ Simplex Assistant is deliberately not an automatic solver. The user is able to c
 - exact arbitrary-precision rational arithmetic;
 - integer, decimal, scientific-notation, and rational-fraction input;
 - exact fraction or configurable decimal display;
-- primal `RHS / aᵢⱼ` and dual `cⱼ / aᵢⱼ` pivot hints on hover;
+- primal RHS / a<sub>i,j</sub> and dual c<sub>j</sub> / a<sub>i,j</sub> pivot hints on hover;
 - Phase I with artificial variables and a canonical `−w` objective row;
 - automatic restoration and canonicalization of the original objective after Phase I;
 - complete tableau history with marked pivots, unified scrolling, undo, and redo;
@@ -26,7 +26,7 @@ Simplex Assistant is deliberately not an automatic solver. The user is able to c
 
 ## Mathematical convention
 
-The constraint rows and the objective row are treated uniformly as tableau equations. At a chosen nonzero entry in row `r` and column `s`, denoted `p = a_{r,s}`, Simplex Assistant divides row `r` by `p`, eliminates column `s` from every other constraint row and from the objective row, and assigns the entering variable to row `r`'s basis position.
+The constraint rows and the objective row are treated uniformly as tableau equations. At a chosen nonzero entry a<sub>i,j</sub> in row i and column j, Simplex Assistant divides row i by a<sub>i,j</sub>, eliminates column j from every other constraint row and from the objective row, and assigns the entering variable to row i's basis position.
 
 All stored numbers are reduced pairs of arbitrary-precision integers. Decimal formatting never changes the stored value.
 
@@ -47,4 +47,4 @@ npm test
 npm run build
 ```
 
-The current production application uses React, TypeScript, Vinext, and Cloudflare-based hosting. Windows 11 is the primary target, while the web/PWA architecture remains cross-platform and suitable for a future static GitHub Pages deployment.
+The application is a cross-platform web/PWA built with React and TypeScript. Production currently runs on OpenAI Sites; the v1 hosting target is a static GitHub Pages deployment at the LPAssistant repository path.
