@@ -97,6 +97,7 @@ export default function App() {
   const [settings, setSettings] = useState<AppSettings>(loadSettings);
   const [modal, setModal] = useState<ModalName>(null);
   const [includePrintResult, setIncludePrintResult] = useState(false);
+  const [includeExportResult, setIncludeExportResult] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -298,7 +299,7 @@ export default function App() {
       <header className="topbar">
         <div className="brand-block">
           <div className="brand-mark"><GridIcon /></div>
-          <div><strong>Simplex Assistant</strong><span>Manual pivot practice</span></div>
+          <div><strong>Simplex Assistant</strong><span>LPAssistant · manual pivot practice</span></div>
         </div>
         <div className="document-title">
           {mode === 'edit' ? (
@@ -329,7 +330,13 @@ export default function App() {
 
       <nav className="commandbar" aria-label="Tableau controls">
         <div className="segmented-control mode-control" aria-label="Mode">
-          <button type="button" className={mode === 'edit' ? 'active' : ''} disabled={!canEdit} title={canEdit ? 'Edit the initial tableau' : 'Edit mode is available only for the initial tableau'} onClick={enterEditMode}>Edit</button>
+          <span
+            className={`disabled-edit-tip${canEdit ? '' : ' visible'}`}
+            data-tooltip="Edit is unavailable after a pivot. Return to the initial tableau to change the problem."
+            title={canEdit ? undefined : 'Edit is unavailable after a pivot. Return to the initial tableau to change the problem.'}
+          >
+            <button type="button" className={mode === 'edit' ? 'active' : ''} disabled={!canEdit} onClick={enterEditMode}>Edit</button>
+          </span>
           <button type="button" className={mode === 'pivot' ? 'active' : ''} onClick={() => { setMode('pivot'); setView('workspace'); }}>Pivot</button>
         </div>
         <div className="command-divider" />
@@ -340,7 +347,7 @@ export default function App() {
         <div className="command-divider" />
         <div className="segmented-control compact-control" aria-label="Algorithm">
           <button type="button" className={algorithm === 'primal' ? 'active' : ''} onClick={() => { setAlgorithm('primal'); setSelection(null); }}>Primal</button>
-          <button type="button" className={algorithm === 'dual' ? 'active' : ''} title="Uses cⱼ / aᵢⱼ ratio guidance; the pivot row operation is unchanged" onClick={() => { setAlgorithm('dual'); setSelection(null); }}>Dual</button>
+          <button type="button" className={algorithm === 'dual' ? 'active' : ''} title="Uses c[j] / a[i,j] ratio guidance; the pivot row operation is unchanged" onClick={() => { setAlgorithm('dual'); setSelection(null); }}>Dual</button>
         </div>
         <div className="command-spacer" />
         <div className="display-control">
@@ -483,12 +490,13 @@ export default function App() {
         history={history}
         currentIndex={currentIndex}
         display={display}
+        includeResult={includeExportResult}
+        onIncludeResultChange={setIncludeExportResult}
         onClose={() => setModal(null)}
         onNotice={showNotice}
         onPrintHistory={(includeResult) => {
           const returnView = view;
           setIncludePrintResult(includeResult);
-          setModal(null);
           setView('history');
           window.setTimeout(() => {
             window.addEventListener('afterprint', () => {
