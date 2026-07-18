@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { AppSettings, ShortcutAction } from '../app/settings';
 import { defaultSettings, shortcutFromEvent, shortcutLabels } from '../app/settings';
 import { createTableauHistoryGraphic, tableauGraphicToPng } from '../export/tableauGraphic';
@@ -18,6 +18,16 @@ interface ModalProps {
 }
 
 export function Modal({ title, eyebrow, onClose, children, wide = false }: ModalProps) {
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      onClose();
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [onClose]);
+
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={(event) => {
       if (event.target === event.currentTarget) onClose();
@@ -152,7 +162,7 @@ export function SettingsModal({ settings, onChange, onClose }: SettingsModalProp
           </label>
           <section className="about-simplex-assistant">
             <span className="eyebrow">About</span>
-            <h3>Simplex Assistant 0.4.1</h3>
+            <h3>Simplex Assistant 0.5.0</h3>
             <p>A manual simplex-method practice tool: every pivot decision stays yours, and zero entries are the only forbidden pivots.</p>
             <p>All calculations use arbitrary-precision rational arithmetic.</p>
           </section>
