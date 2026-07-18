@@ -1,12 +1,12 @@
 # LPAssistant
 
-LPAssistant is an open-ended project for interactive linear-programming learning tools. Its first application is **Simplex Assistant**, a modern manual simplex-tableau trainer inspired by the LP Assistant that accompanied Paul R. Thie and G. E. Keough's *An Introduction to Linear Programming and Game Theory*.
+LPAssistant is an open-ended project for interactive linear-programming learning tools. Its first application is **Simplex Assistant**, a modern manual simplex-tableau trainer inspired by the LPAssistant app that accompanied Paul R. Thie and G. E. Keough's *An Introduction to Linear Programming and Game Theory*.
 
 **Live application:** [Simplex Assistant](https://pivotlab-simplex.valbor2002.chatgpt.site)
 
 ## Simplex Assistant 0.4.1
 
-Simplex Assistant is deliberately not an automatic solver. The user chooses every nonzero pivot; the application performs exactly one pivot transformation and records the resulting tableau.
+Simplex Assistant is deliberately not an automatic solver. The user is able to choose any nonzero pivot; the application performs exactly one pivot transformation and records the resulting tableau.
 
 ### Features
 
