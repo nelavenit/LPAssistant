@@ -14,7 +14,7 @@ export function NumberValue({ value, display }: NumberValueProps) {
   const numerator = negative ? -value.numerator : value.numerator;
   return (
     <span className="number-value fraction-value" aria-label={value.toFraction()}>
-      {negative && <span className="fraction-sign">−</span>}
+      {negative && <span className="fraction-sign" aria-hidden="true" />}
       <span className="fraction-stack">
         <span>{numerator.toString()}</span>
         <span>{value.denominator.toString()}</span>
