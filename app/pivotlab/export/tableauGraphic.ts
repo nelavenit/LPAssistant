@@ -110,15 +110,14 @@ function createGraphic(
 
   if (result) {
     if (!transparent) parts.push(`<rect x="0" y="${tableausHeight}" width="${width}" height="${RESULT_HEIGHT}" fill="#f2f6f4"/>`);
-    parts.push(`<line x1="0" y1="${tableausHeight}" x2="${width}" y2="${tableausHeight}" stroke="#51635b" stroke-width="4"/>`);
     parts.push(renderResultEquation(result, display, width, tableausHeight + RESULT_HEIGHT / 2 + 1));
-    parts.push(`<line x1="0" y1="${height}" x2="${width}" y2="${height}" stroke="${GRID}"/>`);
+    parts.push(`<rect x="1" y="${tableausHeight + 1}" width="${width - 2}" height="${RESULT_HEIGHT - 2}" fill="none" stroke="${GRID}" stroke-width="2"/>`);
   }
 
   const svg = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
     `<title>${escapeXml(title)}</title>`,
-    '<desc>Simplex tableau sequence exported from Simplex Assistant.</desc>',
+    '<desc>Simplex tableau sequence exported from the Simplex Assistant application in LPAssistant.</desc>',
     `<g font-family="Segoe UI, Arial, sans-serif">${parts.join('')}</g>`,
     '</svg>',
   ].join('');
@@ -250,14 +249,20 @@ function numberLabel(
   }
 
   const negative = value.numerator < 0n;
-  const numerator = `${negative ? '−' : ''}${negative ? -value.numerator : value.numerator}`;
+  const numerator = `${negative ? -value.numerator : value.numerator}`;
   const denominator = value.denominator.toString();
   const lineWidth = Math.max(numerator.length, denominator.length) * 8 + 8;
+  const signWidth = 8;
+  const signGap = 5;
+  const totalWidth = lineWidth + (negative ? signWidth + signGap : 0);
+  const left = x - totalWidth / 2;
+  const fractionX = negative ? left + signWidth + signGap + lineWidth / 2 : x;
   const weight = bold ? 700 : 500;
   return [
-    `<text x="${x}" y="${y - 9}" text-anchor="middle" dominant-baseline="middle" ${textPaint()} font-size="14" font-weight="${weight}">${escapeXml(numerator)}</text>`,
-    `<line x1="${x - lineWidth / 2}" y1="${y}" x2="${x + lineWidth / 2}" y2="${y}" stroke="${INK}" stroke-opacity="1" stroke-width="1.2"/>`,
-    `<text x="${x}" y="${y + 12}" text-anchor="middle" dominant-baseline="middle" ${textPaint()} font-size="14" font-weight="${weight}">${escapeXml(denominator)}</text>`,
+    negative ? `<line x1="${left}" y1="${y}" x2="${left + signWidth}" y2="${y}" stroke="${INK}" stroke-opacity="1" stroke-width="1.2"/>` : '',
+    `<text x="${fractionX}" y="${y - 9}" text-anchor="middle" dominant-baseline="middle" ${textPaint()} font-size="14" font-weight="${weight}">${escapeXml(numerator)}</text>`,
+    `<line x1="${fractionX - lineWidth / 2}" y1="${y}" x2="${fractionX + lineWidth / 2}" y2="${y}" stroke="${INK}" stroke-opacity="1" stroke-width="1.2"/>`,
+    `<text x="${fractionX}" y="${y + 12}" text-anchor="middle" dominant-baseline="middle" ${textPaint()} font-size="14" font-weight="${weight}">${escapeXml(denominator)}</text>`,
   ].join('');
 }
 
