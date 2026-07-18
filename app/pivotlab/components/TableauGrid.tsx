@@ -56,13 +56,13 @@ export function TableauGrid({
   };
 
   return (
-    <div className={`tableau-scroll${compact ? ' compact-tableau' : ''}`}>
+    <div
+      className={`tableau-scroll${compact ? ' compact-tableau' : ''}`}
+      style={{ '--table-min-width': `${tableMinimumWidth}px` } as React.CSSProperties}
+    >
       <table
         className="tableau-grid"
-        style={{
-          '--variable-count': tableau.variables.length,
-          '--table-min-width': `${tableMinimumWidth}px`,
-        } as React.CSSProperties}
+        style={{ '--variable-count': tableau.variables.length } as React.CSSProperties}
       >
         <colgroup>
           <col className="basis-col" />
