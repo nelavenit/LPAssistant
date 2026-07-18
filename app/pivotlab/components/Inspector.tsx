@@ -31,7 +31,6 @@ export function EditInspector({
   return (
     <aside className="inspector-card">
       <div className="inspector-heading">
-        <span className="eyebrow">Edit mode</span>
         <h2>Tableau setup</h2>
         <p>Enter integers, decimals, or fractions directly in the grid.</p>
       </div>
@@ -69,7 +68,7 @@ export function EditInspector({
         )}
       </section>
 
-      <div className="quiet-note"><InfoIcon /><span>Changing entries updates the current step. Switch to Pivot mode to lock the tableau.</span></div>
+      <div className="quiet-note"><InfoIcon /><span>Changing entries updates the initial tableau. Switch to Pivot mode to lock it.</span></div>
     </aside>
   );
 }
@@ -79,6 +78,7 @@ interface PivotInspectorProps {
   algorithm: Algorithm;
   display: NumberDisplay;
   selection: PivotSelection | null;
+  onFinishPhaseOne: () => void;
 }
 
 export function PivotInspector({
@@ -86,6 +86,7 @@ export function PivotInspector({
   algorithm,
   display,
   selection,
+  onFinishPhaseOne,
 }: PivotInspectorProps) {
   const rowIndex = selection ? tableau.rows.findIndex((row) => row.id === selection.rowId) : -1;
   const columnIndex = selection ? tableau.variables.findIndex((variable) => variable.id === selection.variableId) : -1;
@@ -104,6 +105,20 @@ export function PivotInspector({
       <div className="inspector-heading">
         <h2>Pivot inspector</h2>
       </div>
+
+      {tableau.phase === 'phase1' && (
+        <section className="inspector-section phase-card pivot-phase-card">
+          <div className="section-title-row">
+            <div>
+              <span className="eyebrow">Artificial variables</span>
+              <h3>Phase I active</h3>
+            </div>
+            <span className="status-badge amber">−w</span>
+          </div>
+          <p>When <strong>−w = 0</strong> and no artificial variable remains basic, restore the original objective.</p>
+          <button className="primary-button" type="button" onClick={onFinishPhaseOne}><CheckIcon /> Finish Phase I</button>
+        </section>
+      )}
 
       {!row || !variable || !value ? (
         <div className="empty-inspector">
