@@ -12,7 +12,8 @@ export type ShortcutAction =
   | 'addVariable'
   | 'increaseFont'
   | 'decreaseFont'
-  | 'openSettings';
+  | 'openSettings'
+  | 'toggleExport';
 
 export interface AppSettings {
   theme: Theme;
@@ -33,7 +34,8 @@ export const shortcutLabels: Record<ShortcutAction, string> = {
   addVariable: 'Add variable',
   increaseFont: 'Increase table font',
   decreaseFont: 'Decrease table font',
-  openSettings: 'Open settings',
+  openSettings: 'Open / close settings',
+  toggleExport: 'Open / close export',
 };
 
 export const defaultSettings: AppSettings = {
@@ -53,6 +55,7 @@ export const defaultSettings: AppSettings = {
     increaseFont: 'Ctrl+=',
     decreaseFont: 'Ctrl+-',
     openSettings: 'Ctrl+,',
+    toggleExport: 'Ctrl+Shift+E',
   },
 };
 
