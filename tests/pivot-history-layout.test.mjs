@@ -48,7 +48,7 @@ test("tableau steps share font sizing and complete-history image exports are ava
   assert.match(grid, /<colgroup>/);
   assert.match(grid, /\{showHeader && \(/);
   assert.match(css, /table-layout: fixed/);
-  assert.match(css, /width: max\(100%, var\(--table-min-width\)\)/);
+  assert.match(css, /min-width: var\(--table-min-width\)/);
   assert.doesNotMatch(css, /\.compact-tableau \.tableau-grid \{ --table-font-size:/);
   assert.match(modal, /PNG · no background/);
   assert.match(modal, /exportImage\('svg'\)/);
@@ -89,7 +89,7 @@ test("renaming, centered selectors, true scaling, and optional results are wired
   assert.match(css, /font-size: 16px/);
   assert.match(css, /\.tableau-grid \.row-actions-column, \.tableau-grid \.row-actions-cell \{[^}]*position: sticky;[^}]*right: 0;/s);
   assert.match(modal, /max="150"/);
-  assert.match(modal, /Simplex Assistant 0\.4\.1/);
+  assert.match(modal, /Simplex Assistant 0\.5\.0/);
   assert.match(settings, /uiScale: clamp\([^\n]+, 85, 150\)/);
   assert.match(settings, /redo: 'Ctrl\+Y'/);
   assert.match(settings, /addConstraint: 'Ctrl\+Alt\+C'/);
@@ -105,4 +105,33 @@ test("renaming, centered selectors, true scaling, and optional results are wired
   assert.doesNotMatch(inspector, /Return to Edit mode/);
   assert.match(grid, /row-actions-cell/);
   assert.match(layout, /title: "Simplex Assistant"/);
+});
+
+test("0.5.0 menus, initial-tableau editing, print restoration, and unified scrolling are wired", async () => {
+  const [app, settings, modal, inspector, css, readme] = await Promise.all([
+    readFile(new URL("../app/pivotlab/App.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/pivotlab/app/settings.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/pivotlab/components/Modals.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/pivotlab/components/Inspector.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+    readFile(new URL("../README-PIVOTLAB.md", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(settings, /openSettings: 'Open \/ close settings'/);
+  assert.match(settings, /toggleExport: 'Open \/ close export'/);
+  assert.match(settings, /toggleExport: 'Ctrl\+Shift\+E'/);
+  assert.match(app, /modal === 'settings' && action === 'openSettings'/);
+  assert.match(app, /modal === 'export' && action === 'toggleExport'/);
+  assert.match(modal, /event\.key !== 'Escape'/);
+  assert.match(app, /const canEdit = currentIndex === 0/);
+  assert.match(app, /disabled=\{!canEdit\}/);
+  assert.match(app, /onChange=\{isCurrent && index === 0 \? replaceCurrent : undefined\}/);
+  assert.match(app, /setView\(returnView\)/);
+  assert.doesNotMatch(inspector, />Edit mode</);
+  assert.match(css, /\.tableau-sequence \{[^}]*overflow: auto;/s);
+  assert.match(css, /\.tableau-sequence \.tableau-scroll \{[^}]*overflow: visible;/s);
+  assert.match(css, /\.tableau-grid thead th \{[^}]*font-size: var\(--table-font-size\);/s);
+  assert.match(css, /\.row-actions-column::after, \.tableau-grid \.row-actions-cell::after/);
+  assert.match(readme, /p = a_\{r,s\}/);
+  assert.doesNotMatch(readme, /aᵣₛ/);
 });

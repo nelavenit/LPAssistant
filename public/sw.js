@@ -1,4 +1,4 @@
-const CACHE = 'simplex-assistant-shell-v7';
+const CACHE = 'simplex-assistant-shell-v8';
 const CORE = ['/', '/manifest.webmanifest', '/icon.svg'];
 
 self.addEventListener('install', (event) => {

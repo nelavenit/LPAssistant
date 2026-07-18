@@ -102,6 +102,7 @@ export default function App() {
   const fileInput = useRef<HTMLInputElement>(null);
   const noticeTimer = useRef<number | null>(null);
   const current = history[currentIndex].tableau;
+  const canEdit = currentIndex === 0;
 
   const showNotice = (message: string) => {
     setNotice(message);
@@ -185,7 +186,18 @@ export default function App() {
   };
   const nextStep = () => {
     if (currentIndex >= history.length - 1) return;
+    setMode('pivot');
     setCurrentIndex((index) => index + 1);
+    setSelection(null);
+  };
+
+  const enterEditMode = () => {
+    if (!canEdit) {
+      showNotice('Edit mode is available only for the initial tableau.');
+      return;
+    }
+    setMode('edit');
+    setView('workspace');
     setSelection(null);
   };
 
@@ -195,7 +207,15 @@ export default function App() {
   };
 
   const shortcutHandlers: Record<ShortcutAction, () => void> = {
-    toggleMode: () => { setMode((value) => value === 'edit' ? 'pivot' : 'edit'); setView('workspace'); setSelection(null); },
+    toggleMode: () => {
+      if (mode === 'edit') {
+        setMode('pivot');
+        setView('workspace');
+        setSelection(null);
+      } else {
+        enterEditMode();
+      }
+    },
     applyPivot: () => applyPivot(),
     undo: previousStep,
     redo: nextStep,
@@ -203,29 +223,45 @@ export default function App() {
     openProject: () => fileInput.current?.click(),
     saveProject,
     addConstraint: () => {
-      setView('workspace');
-      setMode('edit');
+      if (!canEdit) {
+        showNotice('Constraints can be added only to the initial tableau.');
+        return;
+      }
+      enterEditMode();
       replaceCurrent(addConstraint(current));
     },
     addVariable: () => {
-      setView('workspace');
-      setMode('edit');
+      if (!canEdit) {
+        showNotice('Variables can be added only to the initial tableau.');
+        return;
+      }
+      enterEditMode();
       replaceCurrent(addVariable(current));
     },
     increaseFont: () => setSettings((value) => ({ ...value, tableFontSize: Math.min(30, value.tableFontSize + 1) })),
     decreaseFont: () => setSettings((value) => ({ ...value, tableFontSize: Math.max(12, value.tableFontSize - 1) })),
-    openSettings: () => setModal('settings'),
+    openSettings: () => setModal((value) => value === 'settings' ? null : 'settings'),
+    toggleExport: () => setModal((value) => value === 'export' ? null : 'export'),
   };
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (modal) return;
       const shortcut = shortcutFromEvent(event);
       if (!shortcut) return;
       const action = (Object.keys(settings.shortcuts) as ShortcutAction[])
         .find((candidate) => settings.shortcuts[candidate] === shortcut);
       if (!action) return;
       const target = event.target as HTMLElement | null;
+      if (target?.matches('.shortcut-recorder.recording')) return;
+      if (modal) {
+        const closesCurrentMenu = (modal === 'settings' && action === 'openSettings')
+          || (modal === 'export' && action === 'toggleExport');
+        if (!closesCurrentMenu) return;
+        event.preventDefault();
+        event.stopPropagation();
+        setModal(null);
+        return;
+      }
       const isEditing = target?.matches('input, textarea, select, [contenteditable="true"]');
       if (isEditing && action !== 'addConstraint' && action !== 'addVariable') return;
       event.preventDefault();
@@ -248,6 +284,7 @@ export default function App() {
       setCurrentIndex(loaded.currentIndex);
       setSelection(null);
       setView('workspace');
+      if (loaded.currentIndex > 0) setMode('pivot');
       showNotice('Project opened.');
     } catch (caught) {
       showNotice(caught instanceof Error ? caught.message : 'The project could not be opened.');
@@ -285,14 +322,14 @@ export default function App() {
           <button className="icon-button labeled" type="button" onClick={() => setModal('new')} title={`New · ${settings.shortcuts.newProject}`}><PlusIcon /><span>New</span></button>
           <button className="icon-button labeled" type="button" onClick={() => fileInput.current?.click()} title={`Open · ${settings.shortcuts.openProject}`}><FolderIcon /><span>Open</span></button>
           <button className="icon-button labeled" type="button" onClick={saveProject} title={`Save · ${settings.shortcuts.saveProject}`}><SaveIcon /><span>Save</span></button>
-          <button className="icon-button" type="button" onClick={() => setModal('export')} title="Export"><ExportIcon /></button>
-          <button className="icon-button" type="button" onClick={() => setModal('settings')} title={`Settings · ${settings.shortcuts.openSettings}`}><SettingsIcon /></button>
+          <button className="icon-button" type="button" onClick={() => setModal((value) => value === 'export' ? null : 'export')} title={`Export · ${settings.shortcuts.toggleExport}`}><ExportIcon /></button>
+          <button className="icon-button" type="button" onClick={() => setModal((value) => value === 'settings' ? null : 'settings')} title={`Settings · ${settings.shortcuts.openSettings}`}><SettingsIcon /></button>
         </div>
       </header>
 
       <nav className="commandbar" aria-label="Tableau controls">
         <div className="segmented-control mode-control" aria-label="Mode">
-          <button type="button" className={mode === 'edit' ? 'active' : ''} onClick={() => { setMode('edit'); setView('workspace'); setSelection(null); }}>Edit</button>
+          <button type="button" className={mode === 'edit' ? 'active' : ''} disabled={!canEdit} title={canEdit ? 'Edit the initial tableau' : 'Edit mode is available only for the initial tableau'} onClick={enterEditMode}>Edit</button>
           <button type="button" className={mode === 'pivot' ? 'active' : ''} onClick={() => { setMode('pivot'); setView('workspace'); }}>Pivot</button>
         </div>
         <div className="command-divider" />
@@ -327,7 +364,7 @@ export default function App() {
 
       {view === 'workspace' ? (
         <main className="workspace-layout">
-          {mode === 'edit' ? (
+          {mode === 'edit' && canEdit ? (
             <EditInspector
               tableau={current}
               onAddConstraint={() => replaceCurrent(addConstraint(current))}
@@ -349,6 +386,11 @@ export default function App() {
               algorithm={algorithm}
               display={display}
               selection={selection}
+              onFinishPhaseOne={() => safely(() => {
+                const next = finishPhaseOne(current);
+                commit(next, 'Original objective restored');
+                showNotice('Phase I complete. The original objective row is canonical in the current basis.');
+              })}
             />
           )}
           <section className="tableau-card">
@@ -376,7 +418,7 @@ export default function App() {
                   >
                     <TableauGrid
                       tableau={entry.tableau}
-                      mode={isCurrent ? mode : 'pivot'}
+                      mode={isCurrent && index === 0 ? mode : 'pivot'}
                       algorithm={algorithm}
                       display={display}
                       selection={isCurrent ? selection : null}
@@ -385,15 +427,15 @@ export default function App() {
                       pivotMark={index < currentIndex ? history[index + 1]?.pivot : undefined}
                       onPivot={isCurrent && mode === 'pivot' ? applyPivot : undefined}
                       onHoverPivot={isCurrent && mode === 'pivot' ? setSelection : undefined}
-                      onChange={isCurrent ? replaceCurrent : undefined}
-                      onRemoveVariable={isCurrent ? (id) => safely(() => replaceCurrent(removeVariable(current, id))) : undefined}
-                      onRemoveConstraint={isCurrent ? (id) => safely(() => replaceCurrent(removeConstraint(current, id))) : undefined}
+                      onChange={isCurrent && index === 0 ? replaceCurrent : undefined}
+                      onRemoveVariable={isCurrent && index === 0 ? (id) => safely(() => replaceCurrent(removeVariable(current, id))) : undefined}
+                      onRemoveConstraint={isCurrent && index === 0 ? (id) => safely(() => replaceCurrent(removeConstraint(current, id))) : undefined}
                     />
                   </article>
                 );
               })}
             </div>
-            {mode === 'edit' && (
+            {mode === 'edit' && canEdit && (
               <footer className="tableau-card-footer">
                 <div><InfoIcon /><span>Press Enter to commit a cell.</span></div>
                 <span>{current.variables.length + 1} columns · {current.rows.length + 1} rows</span>
@@ -408,7 +450,11 @@ export default function App() {
             currentIndex={currentIndex}
             display={display}
             includeResult={includePrintResult}
-            onRestore={(index) => { setCurrentIndex(index); setSelection(null); }}
+            onRestore={(index) => {
+              setCurrentIndex(index);
+              setSelection(null);
+              if (index > 0) setMode('pivot');
+            }}
           />
         </main>
       )}
@@ -440,11 +486,15 @@ export default function App() {
         onClose={() => setModal(null)}
         onNotice={showNotice}
         onPrintHistory={(includeResult) => {
+          const returnView = view;
           setIncludePrintResult(includeResult);
           setModal(null);
           setView('history');
           window.setTimeout(() => {
-            window.addEventListener('afterprint', () => setIncludePrintResult(false), { once: true });
+            window.addEventListener('afterprint', () => {
+              setIncludePrintResult(false);
+              setView(returnView);
+            }, { once: true });
             window.print();
           }, 120);
         }}
