@@ -59,6 +59,10 @@ export function TableauGrid({
     <div
       className={`tableau-scroll${compact ? ' compact-tableau' : ''}`}
       style={{ '--table-min-width': `${tableMinimumWidth}px` } as React.CSSProperties}
+      onMouseLeave={() => {
+        setHovered(null);
+        onHoverPivot?.(null);
+      }}
     >
       <table
         className="tableau-grid"
@@ -183,7 +187,6 @@ export function TableauGrid({
                           }}
                           onMouseLeave={() => {
                             setHovered(null);
-                            onHoverPivot?.(null);
                           }}
                         >
                           <NumberValue value={value} display={display} />
