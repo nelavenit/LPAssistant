@@ -8,11 +8,12 @@ interface HistoryViewProps {
   history: HistoryEntry[];
   currentIndex: number;
   display: NumberDisplay;
+  tableFontSize?: number;
   onRestore: (index: number) => void;
   includeResult?: boolean;
 }
 
-export function HistoryView({ history, currentIndex, display, onRestore, includeResult = false }: HistoryViewProps) {
+export function HistoryView({ history, currentIndex, display, tableFontSize = 18, onRestore, includeResult = false }: HistoryViewProps) {
   return (
     <section className="history-view">
       <div className="history-intro">
@@ -20,7 +21,7 @@ export function HistoryView({ history, currentIndex, display, onRestore, include
         <div>
           <span className="eyebrow">Solution record</span>
           <h2>Tableau history</h2>
-          <p>Every applied pivot creates a new exact tableau. Print or export the complete sequence for lecture notes.</p>
+          <p>Every applied pivot extends the Simplex Method Tableau. Print or export the complete solution record.</p>
         </div>
       </div>
       <div className="history-list">
@@ -41,6 +42,7 @@ export function HistoryView({ history, currentIndex, display, onRestore, include
             <TableauGrid
               tableau={entry.tableau}
               display={display}
+              tableFontSize={tableFontSize}
               compact
               showHeader={index === 0 || !entry.pivot}
               pivotMark={history[index + 1]?.pivot}

@@ -39,7 +39,7 @@ export function createTableauGraphic(
     [{ tableau, showHeader: true }],
     display,
     options,
-    `${tableau.title} — tableau`,
+    `${tableau.title}: tableau`,
   );
 }
 
@@ -60,7 +60,7 @@ export function createTableauHistoryGraphic(
     steps,
     display,
     options,
-    `${entries[0].tableau.title} — solution history`,
+    `${entries[0].tableau.title}: solution history`,
   );
 }
 
@@ -117,7 +117,7 @@ function createGraphic(
   const svg = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
     `<title>${escapeXml(title)}</title>`,
-    '<desc>Simplex tableau sequence exported from the Simplex Assistant application in LPAssistant.</desc>',
+    '<desc>Complete Simplex Method Tableau exported from Simplex Assistant.</desc>',
     `<g font-family="Segoe UI, Arial, sans-serif">${parts.join('')}</g>`,
     '</svg>',
   ].join('');

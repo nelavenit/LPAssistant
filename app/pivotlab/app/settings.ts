@@ -19,6 +19,7 @@ export interface AppSettings {
   theme: Theme;
   tableFontSize: number;
   uiScale: number;
+  showPivotHints: boolean;
   shortcuts: Record<ShortcutAction, string>;
 }
 
@@ -42,12 +43,13 @@ export const defaultSettings: AppSettings = {
   theme: 'system',
   tableFontSize: 18,
   uiScale: 100,
+  showPivotHints: false,
   shortcuts: {
     toggleMode: 'Ctrl+E',
     applyPivot: 'Ctrl+Enter',
     undo: 'Ctrl+Z',
     redo: 'Ctrl+Y',
-    newProject: 'Ctrl+N',
+    newProject: 'Ctrl+Alt+N',
     openProject: 'Ctrl+O',
     saveProject: 'Ctrl+S',
     addConstraint: 'Ctrl+Alt+C',
@@ -66,6 +68,7 @@ export function loadSettings(): AppSettings {
     // Migrate the original Alt-only bindings, which browsers and desktop menus
     // commonly intercept before a web app can act on them.
     if (storedShortcuts.addConstraint === 'Alt+R') storedShortcuts.addConstraint = defaultSettings.shortcuts.addConstraint;
+    if (storedShortcuts.newProject === 'Ctrl+N') storedShortcuts.newProject = defaultSettings.shortcuts.newProject;
     if (storedShortcuts.redo === 'Ctrl+Shift+Z') storedShortcuts.redo = defaultSettings.shortcuts.redo;
     if (storedShortcuts.addConstraint === 'Ctrl+Alt+R') storedShortcuts.addConstraint = defaultSettings.shortcuts.addConstraint;
     if (storedShortcuts.addVariable === 'Alt+C' || storedShortcuts.addVariable === 'Ctrl+Alt+B') {
@@ -76,6 +79,7 @@ export function loadSettings(): AppSettings {
       ...stored,
       tableFontSize: clamp(Number(stored.tableFontSize ?? defaultSettings.tableFontSize), 12, 30),
       uiScale: clamp(Number(stored.uiScale ?? defaultSettings.uiScale), 85, 150),
+      showPivotHints: stored.showPivotHints === true,
       shortcuts: { ...defaultSettings.shortcuts, ...storedShortcuts },
     };
   } catch {

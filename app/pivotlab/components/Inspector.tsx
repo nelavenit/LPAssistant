@@ -78,6 +78,7 @@ interface PivotInspectorProps {
   algorithm: Algorithm;
   display: NumberDisplay;
   selection: PivotSelection | null;
+  showPivotHints: boolean;
   onFinishPhaseOne: () => void;
 }
 
@@ -86,6 +87,7 @@ export function PivotInspector({
   algorithm,
   display,
   selection,
+  showPivotHints,
   onFinishPhaseOne,
 }: PivotInspectorProps) {
   const rowIndex = selection ? tableau.rows.findIndex((row) => row.id === selection.rowId) : -1;
@@ -98,7 +100,7 @@ export function PivotInspector({
   const leaving = row ? tableau.variables.find((candidate) => candidate.id === row.basisId) : null;
   const recommendedRow = columnIndex >= 0 ? minimumEligibleRow(tableau, columnIndex) : null;
   const primalEligible = Boolean(value?.isPositive() && ratio && !ratio.isNegative());
-  const isMinimum = algorithm === 'primal' && primalEligible && recommendedRow === rowIndex;
+  const isMinimum = showPivotHints && algorithm === 'primal' && primalEligible && recommendedRow === rowIndex;
 
   return (
     <aside className="inspector-card pivot-inspector">
@@ -122,9 +124,9 @@ export function PivotInspector({
 
       {!row || !variable || !value ? (
         <div className="empty-inspector">
-          <div className="pivot-glyph" aria-hidden="true"><span /></div>
+          <PivotHoverIcon />
           <h3>Hover to inspect</h3>
-          <p>Move over a nonzero entry to see its exact ratio, then click the cell to pivot immediately.</p>
+          <p>Move over a nonzero entry to inspect its ratio, then click the cell to pivot immediately.</p>
         </div>
       ) : (
         <>
@@ -153,7 +155,7 @@ export function PivotInspector({
               <span>=</span>
               <span className="ratio-result">{ratio ? <NumberValue value={ratio} display={display} /> : 'undefined'}</span>
             </div>
-            {algorithm === 'primal' && !primalEligible && (
+            {showPivotHints && algorithm === 'primal' && !primalEligible && (
               <p className="ratio-warning">This entry is not eligible for the usual nonnegative primal ratio test.</p>
             )}
           </section>
@@ -162,9 +164,54 @@ export function PivotInspector({
         </>
       )}
 
-      <div className="quiet-note algorithm-note"><InfoIcon /><span>{algorithm === 'primal'
+      {showPivotHints && <div className="quiet-note algorithm-note"><InfoIcon /><span>{algorithm === 'primal'
         ? <>Primal shows RHS / a<sub>i,j</sub> down an entering column to compare leaving rows.</>
-        : <>Dual shows c<sub>j</sub> / a<sub>i,j</sub> across a chosen leaving row to compare entering columns. The row operation itself is unchanged.</>}</span></div>
+        : <>Dual shows c<sub>j</sub> / a<sub>i,j</sub> across a chosen leaving row to compare entering columns. The row operation itself is unchanged.</>}</span></div>}
     </aside>
+  );
+}
+
+function PivotHoverIcon() {
+  return (
+    <svg className="pivot-hover-icon" viewBox="0 0 180 142" role="img" aria-label="Pointer hovering over the value 5 in a small tableau">
+      <defs>
+        <radialGradient id="pivot-cell-field" cx="50%" cy="50%" r="72%">
+          <stop offset="0" stopColor="#e7f0eb" stopOpacity=".98" />
+          <stop offset=".72" stopColor="#edf4f0" stopOpacity=".72" />
+          <stop offset="1" stopColor="#f7faf8" stopOpacity="0" />
+        </radialGradient>
+        <radialGradient id="pivot-orange-glow" cx="50%" cy="50%" r="50%">
+          <stop offset="0" stopColor="#f2a23e" stopOpacity=".58" />
+          <stop offset=".45" stopColor="#f5b45d" stopOpacity=".34" />
+          <stop offset="1" stopColor="#f7c982" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="pivot-line-horizontal" gradientUnits="userSpaceOnUse" x1="17" x2="163">
+          <stop offset="0" stopColor="#b7c9c0" stopOpacity="0" />
+          <stop offset=".18" stopColor="#b7c9c0" stopOpacity=".82" />
+          <stop offset=".82" stopColor="#b7c9c0" stopOpacity=".82" />
+          <stop offset="1" stopColor="#b7c9c0" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id="pivot-line-vertical" gradientUnits="userSpaceOnUse" x1="90" y1="10" x2="90" y2="132">
+          <stop offset="0" stopColor="#b7c9c0" stopOpacity="0" />
+          <stop offset=".18" stopColor="#b7c9c0" stopOpacity=".82" />
+          <stop offset=".82" stopColor="#b7c9c0" stopOpacity=".82" />
+          <stop offset="1" stopColor="#b7c9c0" stopOpacity="0" />
+        </linearGradient>
+        <filter id="pivot-pointer-shadow" x="-30%" y="-30%" width="180%" height="180%">
+          <feDropShadow dx="1" dy="2" stdDeviation="1.4" floodColor="#1a2420" floodOpacity=".28" />
+        </filter>
+      </defs>
+      <rect x="16" y="11" width="148" height="120" rx="28" fill="url(#pivot-cell-field)" />
+      <ellipse cx="126" cy="101" rx="43" ry="39" fill="url(#pivot-orange-glow)" />
+      <line x1="17" y1="71" x2="163" y2="71" stroke="url(#pivot-line-horizontal)" strokeWidth="1.5" />
+      <line x1="90" y1="10" x2="90" y2="132" stroke="url(#pivot-line-vertical)" strokeWidth="1.5" />
+      <g fill="#26352f" fontFamily="Segoe UI, Arial, sans-serif" fontSize="22" fontWeight="650" textAnchor="middle" dominantBaseline="middle">
+        <text x="53" y="43">2</text>
+        <text x="127" y="43">−1</text>
+        <text x="53" y="99">3</text>
+        <text x="127" y="99">5</text>
+      </g>
+      <path d="M135 105v28l6.3-6.6 6.3 13.1 6.1-2.9-6.3-12.9h9.4Z" fill="#fff" stroke="#202725" strokeWidth="2.1" strokeLinejoin="round" filter="url(#pivot-pointer-shadow)" />
+    </svg>
   );
 }

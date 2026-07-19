@@ -1,7 +1,7 @@
 {
-  "name": "LPAssistant — Simplex Assistant",
+  "name": "LPAssistant: Simplex Assistant",
   "short_name": "Simplex Assistant",
-  "description": "The first LPAssistant application: a manual simplex tableau trainer with exact rational arithmetic.",
+  "description": "A manual simplex tableau trainer with exact rational arithmetic.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

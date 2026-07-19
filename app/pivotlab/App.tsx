@@ -299,7 +299,7 @@ export default function App() {
       <header className="topbar">
         <div className="brand-block">
           <div className="brand-mark"><GridIcon /></div>
-          <div><strong>Simplex Assistant</strong><span>LPAssistant · manual pivot practice</span></div>
+          <div><strong>Simplex Assistant</strong><span>Manual pivot practice</span></div>
         </div>
         <div className="document-title">
           {mode === 'edit' ? (
@@ -332,10 +332,15 @@ export default function App() {
         <div className="segmented-control mode-control" aria-label="Mode">
           <span
             className={`disabled-edit-tip${canEdit ? '' : ' visible'}`}
-            data-tooltip="Edit is unavailable after a pivot. Return to the initial tableau to change the problem."
-            title={canEdit ? undefined : 'Edit is unavailable after a pivot. Return to the initial tableau to change the problem.'}
           >
-            <button type="button" className={mode === 'edit' ? 'active' : ''} disabled={!canEdit} onClick={enterEditMode}>Edit</button>
+            <button
+              type="button"
+              className={mode === 'edit' ? 'active' : ''}
+              disabled={!canEdit}
+              aria-describedby={canEdit ? undefined : 'edit-disabled-tooltip'}
+              onClick={enterEditMode}
+            >Edit</button>
+            {!canEdit && <span id="edit-disabled-tooltip" className="control-tooltip" role="tooltip">Edit is available only before the first pivot. Return to the initial tableau to change the problem.</span>}
           </span>
           <button type="button" className={mode === 'pivot' ? 'active' : ''} onClick={() => { setMode('pivot'); setView('workspace'); }}>Pivot</button>
         </div>
@@ -353,7 +358,7 @@ export default function App() {
         <div className="display-control">
           <span>Display</span>
           <div className="segmented-control compact-control">
-            <button type="button" className={numberMode === 'fraction' ? 'active' : ''} onClick={() => setDisplay({ mode: 'fraction' })}>1/2</button>
+            <button type="button" className={numberMode === 'fraction' ? 'active' : ''} onClick={() => setDisplay({ mode: 'fraction' })}><span className="display-fraction-sample"><span>1</span><span aria-hidden="true">/</span><span>2</span></span></button>
             <button type="button" className={numberMode === 'decimal' ? 'active' : ''} onClick={() => setDisplay({ mode: 'decimal', precision: display.mode === 'decimal' ? display.precision : 3 })}>0.50</button>
           </div>
           {display.mode === 'decimal' && (
@@ -393,6 +398,7 @@ export default function App() {
               algorithm={algorithm}
               display={display}
               selection={selection}
+              showPivotHints={settings.showPivotHints}
               onFinishPhaseOne={() => safely(() => {
                 const next = finishPhaseOne(current);
                 commit(next, 'Original objective restored');
@@ -403,7 +409,7 @@ export default function App() {
           <section className="tableau-card">
             <header className="tableau-card-header">
               <div>
-                <span className="eyebrow">Tableau sequence</span>
+                <span className="eyebrow">Simplex method tableau</span>
                 <h1>{current.title}</h1>
               </div>
               <div className="tableau-meta">
@@ -428,6 +434,8 @@ export default function App() {
                       mode={isCurrent && index === 0 ? mode : 'pivot'}
                       algorithm={algorithm}
                       display={display}
+                      showPivotHints={settings.showPivotHints}
+                      tableFontSize={settings.tableFontSize}
                       selection={isCurrent ? selection : null}
                       compact={!isCurrent}
                       showHeader={index === 0 || !entry.pivot}
@@ -444,7 +452,7 @@ export default function App() {
             </div>
             {mode === 'edit' && canEdit && (
               <footer className="tableau-card-footer">
-                <div><InfoIcon /><span>Press Enter to commit a cell.</span></div>
+                <div><InfoIcon /><span>Press Enter to commit a cell. Use the arrow keys to move between cells.</span></div>
                 <span>{current.variables.length + 1} columns · {current.rows.length + 1} rows</span>
               </footer>
             )}
@@ -456,6 +464,7 @@ export default function App() {
             history={history}
             currentIndex={currentIndex}
             display={display}
+            tableFontSize={settings.tableFontSize}
             includeResult={includePrintResult}
             onRestore={(index) => {
               setCurrentIndex(index);

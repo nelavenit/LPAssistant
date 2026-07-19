@@ -160,10 +160,14 @@ export function SettingsModal({ settings, onChange, onClose }: SettingsModalProp
             <span>Interface scale <strong>{settings.uiScale}%</strong></span>
             <input type="range" min="85" max="150" step="5" value={settings.uiScale} onChange={(event) => onChange({ ...settings, uiScale: Number(event.target.value) })} />
           </label>
+          <label className="settings-toggle">
+            <input type="checkbox" checked={settings.showPivotHints} onChange={(event) => onChange({ ...settings, showPivotHints: event.target.checked })} />
+            <span className="custom-checkbox"><CheckIcon /></span>
+            <span><strong>Show pivot guidance</strong><small>Display ratio popovers, minimum markers, and eligibility messages.</small></span>
+          </label>
           <section className="about-simplex-assistant">
             <span className="eyebrow">About</span>
-            <h3>Simplex Assistant 0.6.0</h3>
-            <p>The first application in LPAssistant, an expandable collection of interactive linear-programming learning tools.</p>
+            <h3>Simplex Assistant 0.7.0</h3>
             <p>This manual simplex-method practice tool keeps every pivot decision yours; only zero entries are forbidden.</p>
             <p>All calculations use arbitrary-precision rational arithmetic.</p>
           </section>
@@ -291,10 +295,10 @@ export function ExportModal({
             <span className="custom-checkbox"><CheckIcon /></span>
             <span><strong>Include final result</strong><small>Append f<sub>min</sub> and the decision-variable point to PDF, PNG, and SVG.</small></span>
           </label>
-          <div className="export-action-card"><strong>Complete solution PDF</strong><span>Print the complete solution sequence with exact fractions and marked pivots, or save it as PDF from your browser’s print dialog.</span><button className="secondary-button" type="button" onClick={() => onPrintHistory(includeResult)}>Print / PDF</button></div>
+          <div className="export-action-card"><strong>Complete solution PDF</strong><span>Print the complete Simplex Method Tableau with the current number display and marked pivots, or save it as PDF from your browser’s print dialog.</span><button className="secondary-button" type="button" onClick={() => onPrintHistory(includeResult)}>Print / PDF</button></div>
           <div className="export-action-card">
             <strong>Complete solution image</strong>
-            <span>Export the complete solution sequence with exact fractions and marked pivots as PNG or SVG.</span>
+            <span>Export the complete Simplex Method Tableau with the current number display and marked pivots as PNG or SVG.</span>
             <div className="image-export-buttons">
               <button className="secondary-button" type="button" disabled={imageExporting !== null} onClick={() => void exportImage('png')}>{imageExporting === 'png' ? 'Creating…' : 'PNG'}</button>
               <button className="secondary-button" type="button" disabled={imageExporting !== null} onClick={() => void exportImage('transparent-png')}>{imageExporting === 'transparent-png' ? 'Creating…' : 'PNG · no background'}</button>

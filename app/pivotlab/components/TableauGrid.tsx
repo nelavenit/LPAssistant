@@ -3,7 +3,7 @@ import type { NumberDisplay } from '../math/rational';
 import type { Algorithm, AppMode, PivotRecord, PivotSelection, Tableau, VariableKind } from '../model/tableau';
 import { cloneTableau, minimumEligibleRow, ratioAt } from '../model/tableau';
 import { CellInput } from './CellInput';
-import { TrashIcon } from './Icons';
+import { ChevronIcon, TrashIcon } from './Icons';
 import { NumberValue } from './NumberValue';
 import { VariableName } from './VariableName';
 
@@ -16,6 +16,8 @@ interface TableauGridProps {
   pivotMark?: PivotRecord;
   compact?: boolean;
   showHeader?: boolean;
+  showPivotHints?: boolean;
+  tableFontSize?: number;
   onPivot?: (selection: PivotSelection) => void;
   onHoverPivot?: (selection: PivotSelection | null) => void;
   onChange?: (tableau: Tableau) => void;
@@ -32,6 +34,8 @@ export function TableauGrid({
   pivotMark,
   compact = false,
   showHeader = true,
+  showPivotHints = false,
+  tableFontSize = 18,
   onPivot,
   onHoverPivot,
   onChange,
@@ -42,11 +46,13 @@ export function TableauGrid({
   const selectedColumn = selection
     ? tableau.variables.findIndex((variable) => variable.id === selection.variableId)
     : -1;
-  const minimumRow = selectedColumn >= 0 && algorithm === 'primal'
+  const minimumRow = showPivotHints && selectedColumn >= 0 && algorithm === 'primal'
     ? minimumEligibleRow(tableau, selectedColumn)
     : null;
   const editable = mode === 'edit' && Boolean(onChange) && !compact;
-  const tableMinimumWidth = 104 + tableau.variables.length * 132 + 104 + (editable ? 48 : 0);
+  const variableWidth = Math.max(82, Math.min(148, Math.round(tableFontSize * 5.1)));
+  const sideWidth = Math.max(88, Math.min(140, Math.round(tableFontSize * 5)));
+  const tableMinimumWidth = sideWidth * 2 + tableau.variables.length * variableWidth + (editable ? 48 : 0);
 
   const update = (mutator: (next: Tableau) => void) => {
     if (!onChange) return;
@@ -58,7 +64,11 @@ export function TableauGrid({
   return (
     <div
       className={`tableau-scroll${compact ? ' compact-tableau' : ''}`}
-      style={{ '--table-min-width': `${tableMinimumWidth}px` } as React.CSSProperties}
+      style={{
+        '--table-min-width': `${tableMinimumWidth}px`,
+        '--table-variable-width': `${variableWidth}px`,
+        '--table-side-width': `${sideWidth}px`,
+      } as React.CSSProperties}
       onMouseLeave={() => {
         setHovered(null);
         onHoverPivot?.(null);
@@ -131,18 +141,21 @@ export function TableauGrid({
               <tr key={row.id} className={isHoveredRow ? 'row-hover' : ''}>
                 <th className="basis-cell sticky-left" scope="row">
                   {editable ? (
-                    <select
-                      value={row.basisId ?? ''}
-                      aria-label={`Basic variable in row ${rowIndex + 1}`}
-                      onChange={(event) => update((next) => {
-                        next.rows[rowIndex].basisId = event.target.value || null;
-                      })}
-                    >
-                      <option value="">—</option>
-                      {tableau.variables.map((variable) => (
-                        <option key={variable.id} value={variable.id}>{variable.name}</option>
-                      ))}
-                    </select>
+                    <span className="basis-select-wrap">
+                      <select
+                        value={row.basisId ?? ''}
+                        aria-label={`Basic variable in row ${rowIndex + 1}`}
+                        onChange={(event) => update((next) => {
+                          next.rows[rowIndex].basisId = event.target.value || null;
+                        })}
+                      >
+                        <option value="">—</option>
+                        {tableau.variables.map((variable) => (
+                          <option key={variable.id} value={variable.id}>{variable.name}</option>
+                        ))}
+                      </select>
+                      <ChevronIcon />
+                    </span>
                   ) : basisName ? <VariableName name={basisName} /> : <span className="empty-basis">—</span>}
                 </th>
                 {row.values.slice(0, tableau.variables.length).map((value, columnIndex) => {
@@ -169,6 +182,8 @@ export function TableauGrid({
                           value={value}
                           display={display}
                           ariaLabel={`Coefficient of ${variable.name} in row ${rowIndex + 1}`}
+                          gridRow={rowIndex}
+                          gridColumn={columnIndex}
                           onCommit={(number) => update((next) => { next.rows[rowIndex].values[columnIndex] = number; })}
                         />
                       ) : compact ? (
@@ -190,7 +205,7 @@ export function TableauGrid({
                           }}
                         >
                           <NumberValue value={value} display={display} />
-                          {ratio && (
+                          {showPivotHints && ratio && (
                             <span className="pivot-ratio-tooltip" role="tooltip">
                               <span className="pivot-ratio-name">{algorithm === 'primal' ? 'RHS' : <>c<sub>{columnIndex + 1}</sub></>} / a<sub>{rowIndex + 1},{columnIndex + 1}</sub></span>
                               <span className="pivot-ratio-calculation">
@@ -214,6 +229,8 @@ export function TableauGrid({
                       value={row.values[tableau.variables.length]}
                       display={display}
                       ariaLabel={`RHS in row ${rowIndex + 1}`}
+                      gridRow={rowIndex}
+                      gridColumn={tableau.variables.length}
                       onCommit={(number) => update((next) => { next.rows[rowIndex].values[tableau.variables.length] = number; })}
                     />
                   ) : (
@@ -253,6 +270,8 @@ export function TableauGrid({
                     value={value}
                     display={display}
                     ariaLabel={`Objective coefficient of ${tableau.variables[columnIndex].name}`}
+                    gridRow={tableau.rows.length}
+                    gridColumn={columnIndex}
                     onCommit={(number) => update((next) => { next.objective[columnIndex] = number; })}
                   />
                 ) : <NumberValue value={value} display={display} />}
@@ -264,6 +283,8 @@ export function TableauGrid({
                   value={tableau.objective[tableau.variables.length]}
                   display={display}
                   ariaLabel="Objective RHS"
+                  gridRow={tableau.rows.length}
+                  gridColumn={tableau.variables.length}
                   onCommit={(number) => update((next) => { next.objective[next.variables.length] = number; })}
                 />
               ) : <NumberValue value={tableau.objective[tableau.variables.length]} display={display} />}

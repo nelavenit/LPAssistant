@@ -1,24 +1,24 @@
 # LPAssistant
 
-LPAssistant is an open-ended umbrella project for interactive linear-programming learning tools. It is designed to contain multiple focused applications. Its first—and currently only—application is **Simplex Assistant**, a modern manual simplex-tableau trainer inspired by the LPAssistant app that accompanied Paul R. Thie and G. E. Keough's *An Introduction to Linear Programming and Game Theory*.
+LPAssistant is an open-ended umbrella project for interactive linear-programming learning tools. It is designed to contain multiple focused applications. Its first and currently only application is **Simplex Assistant**, a modern manual simplex-tableau trainer inspired by the LPAssistant app that accompanied Paul R. Thie and G. E. Keough's *An Introduction to Linear Programming and Game Theory*.
 
 **Live application:** [Simplex Assistant](https://pivotlab-simplex.valbor2002.chatgpt.site)
 
-## Simplex Assistant 0.6.0
+## Simplex Assistant 0.7.0
 
 Simplex Assistant is deliberately not an automatic solver. The user is able to choose any nonzero pivot; the application performs exactly one pivot transformation and records the resulting tableau.
 
 ### Features
 
 - arbitrary numbers of constraint rows and variable columns;
-- direct editing of the initial tableau's coefficients, RHS values, variable names, variable types, and basis;
+- direct editing of the initial tableau's coefficients, RHS values, variable names, variable types, and basis, with spreadsheet-style arrow-key navigation;
 - exact arbitrary-precision rational arithmetic;
 - integer, decimal, scientific-notation, and rational-fraction input;
 - exact fraction or configurable decimal display;
-- primal RHS / a<sub>i,j</sub> and dual c<sub>j</sub> / a<sub>i,j</sub> pivot hints on hover;
+- optional primal RHS / a<sub>i,j</sub> and dual c<sub>j</sub> / a<sub>i,j</sub> pivot guidance, disabled by default;
 - Phase I with artificial variables and a canonical `−w` objective row;
 - automatic restoration and canonicalization of the original objective after Phase I;
-- complete tableau history with marked pivots, unified scrolling, undo, and redo;
+- a continuous Simplex Method Tableau with marked pivots, unified scrolling, undo, and redo;
 - project save/open and local autosave;
 - LaTeX, Markdown, CSV, PDF, PNG, transparent PNG, and SVG export;
 - remappable keyboard shortcuts, responsive scaling, and light/dark themes;
