@@ -90,6 +90,17 @@ export function PhaseOneModal({ tableau, onClose, onStart }: PhaseOneModalProps)
   const [selected, setSelected] = useState<Set<string>>(() => new Set(
     tableau.rows.filter((row) => !row.basisId).map((row) => row.id),
   ));
+  const artificialNames = new Map<string, string>();
+  const usedNames = new Set(tableau.variables.map((variable) => variable.name));
+  let artificialCounter = 1;
+  tableau.rows.forEach((row) => {
+    if (!selected.has(row.id)) return;
+    while (usedNames.has(`u${artificialCounter}`)) artificialCounter += 1;
+    const name = `u${artificialCounter}`;
+    artificialNames.set(row.id, name);
+    usedNames.add(name);
+    artificialCounter += 1;
+  });
   return (
     <Modal title="Set up Phase I" eyebrow="Artificial variables method" onClose={onClose}>
       <div className="modal-body">
@@ -110,7 +121,9 @@ export function PhaseOneModal({ tableau, onClose, onStart }: PhaseOneModalProps)
                 />
                 <span className="custom-checkbox"><CheckIcon /></span>
                 <span><strong>Constraint {index + 1}</strong><small>Current basis: {basis ? <VariableName name={basis.name} /> : 'none'}</small></span>
-                <span className="artificial-preview">+ a{index + 1}</span>
+                <span className="artificial-preview">{artificialNames.has(row.id)
+                  ? <>Add <VariableName name={artificialNames.get(row.id)!} /> <small>artificial variable</small></>
+                  : <small>No artificial variable</small>}</span>
               </label>
             );
           })}
@@ -163,11 +176,11 @@ export function SettingsModal({ settings, onChange, onClose }: SettingsModalProp
           <label className="settings-toggle">
             <input type="checkbox" checked={settings.showPivotHints} onChange={(event) => onChange({ ...settings, showPivotHints: event.target.checked })} />
             <span className="custom-checkbox"><CheckIcon /></span>
-            <span><strong>Show pivot guidance</strong><small>Display ratio popovers, minimum markers, and eligibility messages.</small></span>
+            <span><strong>Show pivot guidance</strong><small>Display ratio popovers, minimum markers, and eligibility messages. Primal and dual mode explanations always remain visible.</small></span>
           </label>
           <section className="about-simplex-assistant">
             <span className="eyebrow">About</span>
-            <h3>Simplex Assistant 0.7.0</h3>
+            <h3>Simplex Assistant 0.7.1</h3>
             <p>This manual simplex-method practice tool keeps every pivot decision yours; only zero entries are forbidden.</p>
             <p>All calculations use arbitrary-precision rational arithmetic.</p>
           </section>

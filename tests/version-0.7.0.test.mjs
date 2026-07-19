@@ -18,7 +18,7 @@ test("0.7.0 interaction, sizing, guidance, and copy changes are wired", async ()
   ]);
 
   assert.match(app, /className="display-fraction-sample"/);
-  assert.match(css, /\.display-fraction-sample \{[^}]*align-items: baseline;/s);
+  assert.match(css, /\.display-fraction-sample \{[^}]*display: grid;[^}]*align-items: center;/s);
   assert.match(settings, /newProject: 'Ctrl\+Alt\+N'/);
   assert.match(settings, /storedShortcuts\.newProject === 'Ctrl\+N'/);
   assert.match(cell, /ArrowUp:[\s\S]*ArrowDown:[\s\S]*ArrowLeft:[\s\S]*ArrowRight:/);

@@ -295,7 +295,7 @@ export default function App() {
   const numberMode = display.mode;
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${view === 'workspace' ? ' workspace-open' : ''}`}>
       <header className="topbar">
         <div className="brand-block">
           <div className="brand-mark"><GridIcon /></div>
@@ -358,14 +358,16 @@ export default function App() {
         <div className="display-control">
           <span>Display</span>
           <div className="segmented-control compact-control">
-            <button type="button" className={numberMode === 'fraction' ? 'active' : ''} onClick={() => setDisplay({ mode: 'fraction' })}><span className="display-fraction-sample"><span>1</span><span aria-hidden="true">/</span><span>2</span></span></button>
+            <button type="button" className={numberMode === 'fraction' ? 'active' : ''} onClick={() => setDisplay({ mode: 'fraction' })}>
+              <span className="display-fraction-sample" aria-label="Fractions"><span>1</span><span className="display-fraction-slash" aria-hidden="true" /><span>2</span></span>
+            </button>
             <button type="button" className={numberMode === 'decimal' ? 'active' : ''} onClick={() => setDisplay({ mode: 'decimal', precision: display.mode === 'decimal' ? display.precision : 3 })}>0.50</button>
           </div>
-          {display.mode === 'decimal' && (
-            <select aria-label="Decimal places" value={display.precision} onChange={(event) => setDisplay({ mode: 'decimal', precision: Number(event.target.value) })}>
+          <span className={`decimal-places-slot${display.mode === 'decimal' ? ' visible' : ''}`} aria-hidden={display.mode !== 'decimal'}>
+            <select aria-label="Decimal places" disabled={display.mode !== 'decimal'} tabIndex={display.mode === 'decimal' ? 0 : -1} value={display.mode === 'decimal' ? display.precision : 3} onChange={(event) => setDisplay({ mode: 'decimal', precision: Number(event.target.value) })}>
               {Array.from({ length: 9 }, (_, index) => <option key={index} value={index}>{index} decimals</option>)}
             </select>
-          )}
+          </span>
         </div>
         <div className="undo-controls">
           <button className="icon-button" type="button" disabled={currentIndex === 0} onClick={previousStep} title={`Previous tableau · ${settings.shortcuts.undo}`}><UndoIcon /></button>

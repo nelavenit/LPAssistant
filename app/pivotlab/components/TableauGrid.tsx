@@ -143,6 +143,7 @@ export function TableauGrid({
                   {editable ? (
                     <span className="basis-select-wrap">
                       <select
+                        className="basis-native-select"
                         value={row.basisId ?? ''}
                         aria-label={`Basic variable in row ${rowIndex + 1}`}
                         onChange={(event) => update((next) => {
@@ -154,6 +155,9 @@ export function TableauGrid({
                           <option key={variable.id} value={variable.id}>{variable.name}</option>
                         ))}
                       </select>
+                      <span className="basis-select-display" aria-hidden="true">{basisName
+                        ? <VariableName name={basisName} />
+                        : <span className="empty-basis">—</span>}</span>
                       <ChevronIcon />
                     </span>
                   ) : basisName ? <VariableName name={basisName} /> : <span className="empty-basis">—</span>}

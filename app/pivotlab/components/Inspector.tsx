@@ -164,9 +164,9 @@ export function PivotInspector({
         </>
       )}
 
-      {showPivotHints && <div className="quiet-note algorithm-note"><InfoIcon /><span>{algorithm === 'primal'
-        ? <>Primal shows RHS / a<sub>i,j</sub> down an entering column to compare leaving rows.</>
-        : <>Dual shows c<sub>j</sub> / a<sub>i,j</sub> across a chosen leaving row to compare entering columns. The row operation itself is unchanged.</>}</span></div>}
+      <div className="quiet-note algorithm-note"><InfoIcon /><span>{algorithm === 'primal'
+        ? <>In primal mode, the inspector shows RHS / a<sub>i,j</sub> down an entering column to compare leaving rows.</>
+        : <>In dual mode, the inspector shows c<sub>j</sub> / a<sub>i,j</sub> across a chosen leaving row to compare entering columns. The row operation itself is unchanged.</>}</span></div>
     </aside>
   );
 }
@@ -211,7 +211,7 @@ function PivotHoverIcon() {
         <text x="53" y="99">3</text>
         <text x="127" y="99">5</text>
       </g>
-      <path d="M135 105v28l6.3-6.6 6.3 13.1 6.1-2.9-6.3-12.9h9.4Z" fill="#fff" stroke="#202725" strokeWidth="2.1" strokeLinejoin="round" filter="url(#pivot-pointer-shadow)" />
+      <path d="M139 108v20l4.5-4.7 4.6 9.5 4.2-2-4.6-9.4h6.8Z" fill="#fff" stroke="#202725" strokeWidth="1.35" strokeLinejoin="round" filter="url(#pivot-pointer-shadow)" />
     </svg>
   );
 }

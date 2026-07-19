@@ -87,7 +87,7 @@ test("renaming, centered selectors, true scaling, and optional results are wired
   assert.match(css, /font-size: 16px/);
   assert.match(css, /\.tableau-grid \.row-actions-column, \.tableau-grid \.row-actions-cell \{[^}]*position: sticky;[^}]*right: 0;/s);
   assert.match(modal, /max="150"/);
-  assert.match(modal, /Simplex Assistant 0\.7\.0/);
+  assert.match(modal, /Simplex Assistant 0\.7\.1/);
   assert.match(settings, /uiScale: clamp\([^\n]+, 85, 150\)/);
   assert.match(settings, /redo: 'Ctrl\+Y'/);
   assert.match(settings, /addConstraint: 'Ctrl\+Alt\+C'/);
@@ -178,5 +178,5 @@ test("0.7.0 typography, hover continuity, exports, and LPAssistant identity are 
   assert.match(manifest, /LPAssistant: Simplex Assistant/);
   assert.match(page, /new URL\('sw\.js', window\.location\.href\)/);
   assert.match(serviceWorker, /self\.registration\.scope/);
-  assert.match(pkg, /"version": "0\.7\.0"/);
+  assert.match(pkg, /"version": "0\.7\.1"/);
 });
