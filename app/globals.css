@@ -597,13 +597,13 @@ kbd { display: inline-flex; min-height: 22px; align-items: center; padding: 2px 
 
 @media print {
   @page { margin: 0; }
-  :root { --table-font-size: 11pt !important; color-scheme: light; }
+  :root { --table-font-size: 9.5pt !important; color-scheme: light; }
   body { zoom: 1 !important; margin: 0; background: #fff !important; color: #000 !important; }
   .app-shell { min-height: auto; }
   .topbar, .commandbar, .inspector-card, .toast, .modal-backdrop, .history-intro, .restore-step { display: none !important; }
   .workspace-layout, .app-shell > .history-main { display: none !important; }
   .print-solution-record { display: block; max-width: none; padding: 8mm; }
-  .tableau-card, .history-card { box-shadow: none; border: 0; border-radius: 0; margin: 0; }
+  .tableau-card, .history-card, .history-card.current { box-shadow: none; border: 0; border-radius: 0; margin: 0; }
   .tableau-card { break-inside: auto; }
   .tableau-step, .history-card { break-inside: avoid; }
   .pivot-ratio-tooltip { display: none; }
@@ -615,13 +615,16 @@ kbd { display: inline-flex; min-height: 22px; align-items: center; padding: 2px 
   .history-card + .history-card, .tableau-step + .tableau-step { border-top: 0; }
   .history-card > header { display: none !important; }
   .tableau-scroll, .compact-tableau { max-height: none; overflow: visible; }
-  .history-card .tableau-scroll { border-left: 1px solid #777; border-right: 1px solid #777; border-top: 0; border-bottom: 0; }
-  .history-card:first-child .tableau-scroll, .history-card + .history-card .tableau-scroll { border-top: 1px solid #777; }
-  .history-card:last-child .tableau-scroll { border-bottom: 1px solid #777; }
+  .solution-stage { display: block; margin: 0 0 6mm; break-inside: auto; }
+  .solution-stage:last-child { margin-bottom: 0; }
+  .solution-stage-label { margin: 0 0 2mm; padding: 0; border: 0; border-radius: 0; color: #222; background: #fff; font-size: 9pt; }
+  .solution-stage-tableaux { display: block; border: 1px solid #777; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+  .history-card .tableau-scroll { border: 0; }
+  .solution-stage-tableaux .history-card + .history-card .tableau-scroll { border-top: 1px solid #777; }
   .tableau-grid { width: 100%; min-width: 0 !important; }
   .tableau-grid col.basis-col, .tableau-grid col.rhs-col { width: 9%; }
   .tableau-grid col.variable-col { width: auto; }
-  .tableau-grid th, .tableau-grid td { position: static !important; min-width: 0; height: 11mm; padding: 2mm; border-right: 1px solid #777 !important; border-bottom: 1px solid #777 !important; border-left: 0 !important; background: #fff !important; }
+  .tableau-grid th, .tableau-grid td { position: static !important; min-width: 0; height: 7.5mm; padding: 1.2mm; border-right: 1px solid #777 !important; border-bottom: 1px solid #777 !important; border-left: 0 !important; background: #fff !important; }
   .tableau-grid th:last-child, .tableau-grid td:last-child { border-right: 0 !important; }
   .tableau-grid .sticky-left, .tableau-grid .sticky-right, .tableau-grid .rhs-column, .tableau-grid .rhs-cell, .tableau-grid .objective-rhs { border-left: 0 !important; border-right: 1px solid #777 !important; }
   .tableau-grid .rhs-column, .tableau-grid .rhs-cell, .tableau-grid .objective-rhs { border-right: 0 !important; }
@@ -629,7 +632,7 @@ kbd { display: inline-flex; min-height: 22px; align-items: center; padding: 2px 
   .tableau-grid .selected-pivot, .tableau-grid .historic-pivot { position: relative !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   .selected-pivot { background: #fff4df !important; }
   .selected-pivot::after, .historic-pivot::after { inset: 13% 10% !important; border-color: #d98520 !important; }
-  .solution-result { margin: 0; padding: 5mm 2mm; border: 1px solid #777; border-top: 0; border-radius: 0; box-shadow: none; background: #fff; color: #000; break-inside: avoid; }
+  .solution-result { margin: 4mm 0 0; padding: 4mm 2mm; border: 1px solid #777; border-radius: 0; box-shadow: none; background: #fff; color: #000; break-inside: avoid; }
   .solution-result-label { display: none; }
   .solution-result-equation { justify-content: center; color: #000; font-size: 13pt; }
   .solution-result-equation > strong { color: #000; }
