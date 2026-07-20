@@ -176,9 +176,9 @@ function PivotHoverIcon() {
     <svg className="pivot-hover-icon" viewBox="0 0 180 142" role="img" aria-label="Pointer hovering over the value 5 in a small tableau">
       <defs>
         <radialGradient id="pivot-cell-field" cx="50%" cy="50%" r="72%">
-          <stop offset="0" stopColor="#e7f0eb" stopOpacity=".98" />
-          <stop offset=".72" stopColor="#edf4f0" stopOpacity=".72" />
-          <stop offset="1" stopColor="#f7faf8" stopOpacity="0" />
+          <stop offset="0" stopColor="var(--pivot-icon-field)" stopOpacity=".98" />
+          <stop offset=".72" stopColor="var(--pivot-icon-field-edge)" stopOpacity=".62" />
+          <stop offset="1" stopColor="var(--pivot-icon-field-edge)" stopOpacity="0" />
         </radialGradient>
         <radialGradient id="pivot-orange-glow" cx="50%" cy="50%" r="50%">
           <stop offset="0" stopColor="#f2a23e" stopOpacity=".58" />
@@ -186,16 +186,16 @@ function PivotHoverIcon() {
           <stop offset="1" stopColor="#f7c982" stopOpacity="0" />
         </radialGradient>
         <linearGradient id="pivot-line-horizontal" gradientUnits="userSpaceOnUse" x1="17" x2="163">
-          <stop offset="0" stopColor="#b7c9c0" stopOpacity="0" />
-          <stop offset=".18" stopColor="#b7c9c0" stopOpacity=".82" />
-          <stop offset=".82" stopColor="#b7c9c0" stopOpacity=".82" />
-          <stop offset="1" stopColor="#b7c9c0" stopOpacity="0" />
+          <stop offset="0" stopColor="var(--pivot-icon-line)" stopOpacity="0" />
+          <stop offset=".18" stopColor="var(--pivot-icon-line)" stopOpacity=".82" />
+          <stop offset=".82" stopColor="var(--pivot-icon-line)" stopOpacity=".82" />
+          <stop offset="1" stopColor="var(--pivot-icon-line)" stopOpacity="0" />
         </linearGradient>
         <linearGradient id="pivot-line-vertical" gradientUnits="userSpaceOnUse" x1="90" y1="10" x2="90" y2="132">
-          <stop offset="0" stopColor="#b7c9c0" stopOpacity="0" />
-          <stop offset=".18" stopColor="#b7c9c0" stopOpacity=".82" />
-          <stop offset=".82" stopColor="#b7c9c0" stopOpacity=".82" />
-          <stop offset="1" stopColor="#b7c9c0" stopOpacity="0" />
+          <stop offset="0" stopColor="var(--pivot-icon-line)" stopOpacity="0" />
+          <stop offset=".18" stopColor="var(--pivot-icon-line)" stopOpacity=".82" />
+          <stop offset=".82" stopColor="var(--pivot-icon-line)" stopOpacity=".82" />
+          <stop offset="1" stopColor="var(--pivot-icon-line)" stopOpacity="0" />
         </linearGradient>
         <filter id="pivot-pointer-shadow" x="-30%" y="-30%" width="180%" height="180%">
           <feDropShadow dx="1" dy="2" stdDeviation="1.4" floodColor="#1a2420" floodOpacity=".28" />
@@ -205,13 +205,13 @@ function PivotHoverIcon() {
       <ellipse cx="126" cy="101" rx="43" ry="39" fill="url(#pivot-orange-glow)" />
       <line x1="17" y1="71" x2="163" y2="71" stroke="url(#pivot-line-horizontal)" strokeWidth="1.5" />
       <line x1="90" y1="10" x2="90" y2="132" stroke="url(#pivot-line-vertical)" strokeWidth="1.5" />
-      <g fill="#26352f" fontFamily="Segoe UI, Arial, sans-serif" fontSize="22" fontWeight="650" textAnchor="middle" dominantBaseline="middle">
+      <g fill="var(--pivot-icon-ink)" fontFamily="Segoe UI, Arial, sans-serif" fontSize="22" fontWeight="650" textAnchor="middle" dominantBaseline="middle">
         <text x="53" y="43">2</text>
         <text x="127" y="43">−1</text>
         <text x="53" y="99">3</text>
         <text x="127" y="99">5</text>
       </g>
-      <path d="M139 108v20l4.5-4.7 4.6 9.5 4.2-2-4.6-9.4h6.8Z" fill="#fff" stroke="#202725" strokeWidth="1.35" strokeLinejoin="round" filter="url(#pivot-pointer-shadow)" />
+      <path d="M140 110v16l3.6-3.8 3.7 7.6 3.3-1.6-3.7-7.5h5.5Z" fill="var(--pivot-icon-pointer-fill)" stroke="var(--pivot-icon-pointer-stroke)" strokeWidth="1.15" strokeLinejoin="round" filter="url(#pivot-pointer-shadow)" />
     </svg>
   );
 }

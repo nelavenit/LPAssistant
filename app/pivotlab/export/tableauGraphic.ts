@@ -1,6 +1,7 @@
 import type { NumberDisplay } from '../math/rational';
 import { formatRational, type Rational } from '../math/rational';
 import { getSolutionResult, type SolutionResult } from '../model/result';
+import { groupTableauStages } from '../model/stages';
 import type { HistoryEntry, PivotRecord, Tableau } from '../model/tableau';
 
 const BASIS_WIDTH = 112;
@@ -8,7 +9,9 @@ const VALUE_WIDTH = 132;
 const RHS_WIDTH = 112;
 const HEADER_HEIGHT = 52;
 const ROW_HEIGHT = 68;
-const STEP_SEPARATOR = 4;
+const STEP_SEPARATOR = 2;
+const STAGE_LABEL_HEIGHT = 40;
+const STAGE_GAP = 22;
 const RESULT_HEIGHT = 72;
 const INK = '#111111';
 const GRID = '#64756d';
@@ -22,6 +25,8 @@ export interface TableauGraphic {
 interface GraphicOptions {
   transparent?: boolean;
   includeResult?: boolean;
+  completeSolution?: boolean;
+  resultTableau?: Tableau;
 }
 
 interface GraphicStep {
@@ -30,13 +35,18 @@ interface GraphicStep {
   pivotMark?: PivotRecord;
 }
 
+interface GraphicStage {
+  label: string | null;
+  steps: GraphicStep[];
+}
+
 export function createTableauGraphic(
   tableau: Tableau,
   display: NumberDisplay,
   options: GraphicOptions = {},
 ): TableauGraphic {
   return createGraphic(
-    [{ tableau, showHeader: true }],
+    [{ label: null, steps: [{ tableau, showHeader: true }] }],
     display,
     options,
     `${tableau.title}: tableau`,
@@ -49,40 +59,57 @@ export function createTableauHistoryGraphic(
   display: NumberDisplay,
   options: GraphicOptions = {},
 ): TableauGraphic {
-  const entries = history.slice(0, Math.max(0, currentIndex) + 1);
+  const completeSolution = options.completeSolution ?? true;
+  const entries = completeSolution
+    ? history.slice(0, Math.max(0, currentIndex) + 1)
+    : history.slice(0, 1);
   if (entries.length === 0) throw new Error('There are no tableaux to export.');
-  const steps = entries.map((entry, index): GraphicStep => ({
-    tableau: entry.tableau,
-    showHeader: index === 0 || !entry.pivot,
-    pivotMark: entries[index + 1]?.pivot,
+  const stages = groupTableauStages(entries, entries.length - 1).map((stage): GraphicStage => ({
+    label: stage.label,
+    steps: stage.entries.map(({ entry, index }, stageIndex): GraphicStep => ({
+      tableau: entry.tableau,
+      showHeader: stageIndex === 0,
+      pivotMark: entries[index + 1]?.pivot,
+    })),
   }));
   return createGraphic(
-    steps,
+    stages,
     display,
     options,
-    `${entries[0].tableau.title}: solution history`,
+    `${entries[0].tableau.title}: ${completeSolution ? 'complete solution' : 'initial problem'}`,
   );
 }
 
 function createGraphic(
-  steps: GraphicStep[],
+  stages: GraphicStage[],
   display: NumberDisplay,
   options: GraphicOptions,
   title: string,
 ): TableauGraphic {
-  const layouts = steps.map((step) => ({
-    ...step,
-    width: tableWidth(step.tableau),
-    height: tableHeight(step.tableau, step.showHeader),
-  }));
+  const layouts = stages.map((stage) => {
+    const steps = stage.steps.map((step) => ({
+      ...step,
+      width: tableWidth(step.tableau),
+      height: tableHeight(step.tableau, step.showHeader),
+    }));
+    return {
+      ...stage,
+      steps,
+      width: Math.max(...steps.map((step) => step.width)),
+      height: (stage.label ? STAGE_LABEL_HEIGHT : 0)
+        + steps.reduce((sum, step) => sum + step.height, 0)
+        + Math.max(0, steps.length - 1) * STEP_SEPARATOR,
+    };
+  });
   const transparent = options.transparent ?? false;
-  const finalTableau = layouts[layouts.length - 1].tableau;
+  const finalLayout = layouts[layouts.length - 1];
+  const finalTableau = options.resultTableau ?? finalLayout.steps[finalLayout.steps.length - 1].tableau;
   const result = options.includeResult ? getSolutionResult(finalTableau) : null;
   const resultText = result ? plainResultText(result, display) : null;
   const resultWidth = resultText ? resultText.length * 10 + 56 : 0;
   const width = Math.max(resultWidth, ...layouts.map((layout) => layout.width));
   const tableausHeight = layouts.reduce((sum, layout) => sum + layout.height, 0)
-    + Math.max(0, layouts.length - 1) * STEP_SEPARATOR;
+    + Math.max(0, layouts.length - 1) * STAGE_GAP;
   const height = tableausHeight + (resultText ? RESULT_HEIGHT : 0);
   const parts: string[] = [];
 
@@ -91,21 +118,29 @@ function createGraphic(
   }
 
   let y = 0;
-  layouts.forEach((layout, index) => {
-    if (index > 0) {
-      parts.push(`<rect x="0" y="${y}" width="${layout.width}" height="${STEP_SEPARATOR}" fill="#51635b"/>`);
-      y += STEP_SEPARATOR;
+  layouts.forEach((stage, stageIndex) => {
+    if (stageIndex > 0) y += STAGE_GAP;
+    if (stage.label) {
+      if (!transparent) parts.push(`<rect x="0" y="${y}" width="${stage.width}" height="${STAGE_LABEL_HEIGHT}" fill="#f2f6f4"/>`);
+      parts.push(`<text x="14" y="${y + STAGE_LABEL_HEIGHT / 2}" text-anchor="start" dominant-baseline="middle" ${textPaint()} font-size="14" font-weight="700">${escapeXml(stage.label)}</text>`);
+      y += STAGE_LABEL_HEIGHT;
     }
-    parts.push(...renderTableau(
-      layout.tableau,
-      display,
-      y,
-      layout.showHeader,
-      layout.pivotMark,
-      index === 0,
-      transparent,
-    ));
-    y += layout.height;
+    stage.steps.forEach((layout, stepIndex) => {
+      if (stepIndex > 0) {
+        parts.push(`<rect x="0" y="${y}" width="${layout.width}" height="${STEP_SEPARATOR}" fill="${GRID}"/>`);
+        y += STEP_SEPARATOR;
+      }
+      parts.push(...renderTableau(
+        layout.tableau,
+        display,
+        y,
+        layout.showHeader,
+        layout.pivotMark,
+        stepIndex === 0,
+        transparent,
+      ));
+      y += layout.height;
+    });
   });
 
   if (result) {

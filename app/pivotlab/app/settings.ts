@@ -26,8 +26,8 @@ export interface AppSettings {
 export const shortcutLabels: Record<ShortcutAction, string> = {
   toggleMode: 'Toggle Edit / Pivot mode',
   applyPivot: 'Apply hovered pivot',
-  undo: 'Previous tableau',
-  redo: 'Next tableau',
+  undo: 'Undo edit / previous tableau',
+  redo: 'Redo edit / next tableau',
   newProject: 'New tableau',
   openProject: 'Open project',
   saveProject: 'Save project',
@@ -78,7 +78,7 @@ export function loadSettings(): AppSettings {
       ...defaultSettings,
       ...stored,
       tableFontSize: clamp(Number(stored.tableFontSize ?? defaultSettings.tableFontSize), 12, 30),
-      uiScale: clamp(Number(stored.uiScale ?? defaultSettings.uiScale), 85, 150),
+      uiScale: clamp(Number(stored.uiScale ?? defaultSettings.uiScale), 75, 150),
       showPivotHints: stored.showPivotHints === true,
       shortcuts: { ...defaultSettings.shortcuts, ...storedShortcuts },
     };

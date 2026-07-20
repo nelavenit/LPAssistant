@@ -22,7 +22,16 @@ import {
   type Tableau,
 } from './model/tableau';
 import { deserializeProject, serializeProject } from './model/project';
-import { HistoryView } from './components/HistoryView';
+import { groupTableauStages } from './model/stages';
+import {
+  createProblemHistoryRecord,
+  loadProblemHistory,
+  MAX_SAVED_PROBLEMS,
+  openProblemHistoryRecord,
+  saveProblemHistory,
+  type ProblemHistoryRecord,
+} from './model/problemHistory';
+import { ProblemHistoryView, SolutionHistoryView } from './components/HistoryView';
 import {
   ExportIcon,
   FolderIcon,
@@ -89,6 +98,9 @@ export default function App() {
   const session = useMemo(() => initialSession(), []);
   const [history, setHistory] = useState<HistoryEntry[]>(session.history);
   const [currentIndex, setCurrentIndex] = useState(session.currentIndex);
+  const [editHistory, setEditHistory] = useState<Tableau[]>([session.history[0].tableau]);
+  const [editIndex, setEditIndex] = useState(0);
+  const [problemHistory, setProblemHistory] = useState<ProblemHistoryRecord[]>(loadProblemHistory);
   const [mode, setMode] = useState<AppMode>('pivot');
   const [algorithm, setAlgorithm] = useState<Algorithm>('primal');
   const [view, setView] = useState<View>('workspace');
@@ -97,7 +109,10 @@ export default function App() {
   const [settings, setSettings] = useState<AppSettings>(loadSettings);
   const [modal, setModal] = useState<ModalName>(null);
   const [includePrintResult, setIncludePrintResult] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
   const [includeExportResult, setIncludeExportResult] = useState(true);
+  const [includeExportSolution, setIncludeExportSolution] = useState(true);
+  const [printCompleteSolution, setPrintCompleteSolution] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -114,6 +129,10 @@ export default function App() {
   useEffect(() => {
     try { localStorage.setItem('pivotlab-autosave', serializeProject(history, currentIndex)); } catch { /* Quota errors are nonfatal. */ }
   }, [history, currentIndex]);
+
+  useEffect(() => {
+    try { saveProblemHistory(problemHistory); } catch { /* Quota errors are nonfatal. */ }
+  }, [problemHistory]);
 
   useEffect(() => {
     localStorage.setItem('pivotlab-display', JSON.stringify(display));
@@ -139,6 +158,10 @@ export default function App() {
   }, []);
 
   const replaceCurrent = (tableau: Tableau) => {
+    // Edits and pivots intentionally use separate timelines. Editing step zero
+    // invalidates later pivots, while its own redo snapshots remain available.
+    setEditHistory((previous) => [...previous.slice(0, editIndex + 1), tableau]);
+    setEditIndex((index) => index + 1);
     setHistory((previous) => {
       const next = previous.slice(0, currentIndex + 1);
       next[currentIndex] = { ...next[currentIndex], tableau };
@@ -157,9 +180,20 @@ export default function App() {
     setSelection(null);
   };
 
+  const archiveCurrentProblem = (excludingId?: string) => {
+    const archived = createProblemHistoryRecord(history, currentIndex);
+    setProblemHistory((previous) => [
+      archived,
+      ...previous.filter((record) => record.id !== excludingId),
+    ].slice(0, MAX_SAVED_PROBLEMS));
+  };
+
   const reset = (tableau: Tableau) => {
+    archiveCurrentProblem();
     setHistory([{ id: makeId('history'), label: 'Initial tableau', tableau }]);
     setCurrentIndex(0);
+    setEditHistory([tableau]);
+    setEditIndex(0);
     setSelection(null);
     setView('workspace');
     setMode('edit');
@@ -181,11 +215,29 @@ export default function App() {
   });
 
   const previousStep = () => {
+    if (mode === 'edit' && canEdit) {
+      if (editIndex <= 0) return;
+      const nextIndex = editIndex - 1;
+      const tableau = editHistory[nextIndex];
+      setEditIndex(nextIndex);
+      setHistory((previous) => [{ ...previous[0], tableau }]);
+      setSelection(null);
+      return;
+    }
     if (currentIndex <= 0) return;
     setCurrentIndex((index) => index - 1);
     setSelection(null);
   };
   const nextStep = () => {
+    if (mode === 'edit' && canEdit) {
+      if (editIndex >= editHistory.length - 1) return;
+      const nextIndex = editIndex + 1;
+      const tableau = editHistory[nextIndex];
+      setEditIndex(nextIndex);
+      setHistory((previous) => [{ ...previous[0], tableau }]);
+      setSelection(null);
+      return;
+    }
     if (currentIndex >= history.length - 1) return;
     setMode('pivot');
     setCurrentIndex((index) => index + 1);
@@ -264,7 +316,8 @@ export default function App() {
         return;
       }
       const isEditing = target?.matches('input, textarea, select, [contenteditable="true"]');
-      if (isEditing && action !== 'addConstraint' && action !== 'addVariable') return;
+      const editTimelineAction = mode === 'edit' && (action === 'undo' || action === 'redo');
+      if (isEditing && action !== 'addConstraint' && action !== 'addVariable' && !editTimelineAction) return;
       event.preventDefault();
       event.stopPropagation();
       if (isEditing) target?.blur();
@@ -281,18 +334,35 @@ export default function App() {
     }
     try {
       const loaded = deserializeProject(await file.text());
+      archiveCurrentProblem();
       setHistory(loaded.history);
       setCurrentIndex(loaded.currentIndex);
+      setEditHistory([loaded.history[0].tableau]);
+      setEditIndex(0);
       setSelection(null);
       setView('workspace');
-      if (loaded.currentIndex > 0) setMode('pivot');
+      setMode(loaded.currentIndex > 0 ? 'pivot' : 'edit');
       showNotice('Project opened.');
     } catch (caught) {
       showNotice(caught instanceof Error ? caught.message : 'The project could not be opened.');
     }
   };
 
+  const resumeProblem = (record: ProblemHistoryRecord) => safely(() => {
+    const loaded = openProblemHistoryRecord(record);
+    archiveCurrentProblem(record.id);
+    setHistory(loaded.history);
+    setCurrentIndex(loaded.currentIndex);
+    setEditHistory([loaded.history[0].tableau]);
+    setEditIndex(0);
+    setSelection(null);
+    setView('workspace');
+    setMode(loaded.currentIndex > 0 ? 'pivot' : 'edit');
+    showNotice(`${record.title} restored from local history.`);
+  });
+
   const numberMode = display.mode;
+  const tableauStages = groupTableauStages(history, currentIndex);
 
   return (
     <div className={`app-shell${view === 'workspace' ? ' workspace-open' : ''}`}>
@@ -347,7 +417,7 @@ export default function App() {
         <div className="command-divider" />
         <div className="segmented-control view-control" aria-label="View">
           <button type="button" className={view === 'workspace' ? 'active' : ''} onClick={() => setView('workspace')}><GridIcon /> Tableau</button>
-          <button type="button" className={view === 'history' ? 'active' : ''} onClick={() => setView('history')}><HistoryIcon /> History <span className="count-pill">{history.length}</span></button>
+          <button type="button" className={view === 'history' ? 'active' : ''} onClick={() => setView('history')}><HistoryIcon /> History <span className="count-pill">{problemHistory.length}</span></button>
         </div>
         <div className="command-divider" />
         <div className="segmented-control compact-control" aria-label="Algorithm">
@@ -359,7 +429,7 @@ export default function App() {
           <span>Display</span>
           <div className="segmented-control compact-control">
             <button type="button" className={numberMode === 'fraction' ? 'active' : ''} onClick={() => setDisplay({ mode: 'fraction' })}>
-              <span className="display-fraction-sample" aria-label="Fractions"><span>1</span><span className="display-fraction-slash" aria-hidden="true" /><span>2</span></span>
+              <span className="display-fraction-sample" aria-label="Fractions">1/2</span>
             </button>
             <button type="button" className={numberMode === 'decimal' ? 'active' : ''} onClick={() => setDisplay({ mode: 'decimal', precision: display.mode === 'decimal' ? display.precision : 3 })}>0.50</button>
           </div>
@@ -370,9 +440,9 @@ export default function App() {
           </span>
         </div>
         <div className="undo-controls">
-          <button className="icon-button" type="button" disabled={currentIndex === 0} onClick={previousStep} title={`Previous tableau · ${settings.shortcuts.undo}`}><UndoIcon /></button>
-          <span>{currentIndex + 1} / {history.length}</span>
-          <button className="icon-button" type="button" disabled={currentIndex === history.length - 1} onClick={nextStep} title={`Next tableau · ${settings.shortcuts.redo}`}><RedoIcon /></button>
+          <button className="icon-button" type="button" disabled={mode === 'edit' ? editIndex === 0 : currentIndex === 0} onClick={previousStep} title={`${mode === 'edit' ? 'Undo edit' : 'Previous tableau'} · ${settings.shortcuts.undo}`}><UndoIcon /></button>
+          <span>{mode === 'edit' ? `${editIndex + 1} / ${editHistory.length}` : `${currentIndex + 1} / ${history.length}`}</span>
+          <button className="icon-button" type="button" disabled={mode === 'edit' ? editIndex === editHistory.length - 1 : currentIndex === history.length - 1} onClick={nextStep} title={`${mode === 'edit' ? 'Redo edit' : 'Next tableau'} · ${settings.shortcuts.redo}`}><RedoIcon /></button>
         </div>
       </nav>
 
@@ -415,64 +485,63 @@ export default function App() {
                 <h1>{current.title}</h1>
               </div>
               <div className="tableau-meta">
-                <span>{current.rows.length} × {current.variables.length}</span>
+                <span>{current.rows.length} {current.rows.length === 1 ? 'constraint' : 'constraints'}, {current.variables.length} {current.variables.length === 1 ? 'variable' : 'variables'}</span>
                 {current.phase === 'phase1' && <span className="status-badge amber">Phase I · −w</span>}
               </div>
             </header>
             <div className="tableau-sequence">
-              {history.slice(0, currentIndex + 1).map((entry, index) => {
-                const isCurrent = index === currentIndex;
-                const stepDescription = entry.pivot
-                  ? `${entry.label}. ${entry.pivot.enteringName} entered, ${entry.pivot.leavingName} left; pivot ${entry.pivot.pivotValue}.`
-                  : entry.label;
-                return (
-                  <article
-                    key={entry.id}
-                    className={`tableau-step${isCurrent ? ' current' : ''}`}
-                    aria-label={`Step ${index}. ${stepDescription}`}
-                  >
-                    <TableauGrid
-                      tableau={entry.tableau}
-                      mode={isCurrent && index === 0 ? mode : 'pivot'}
-                      algorithm={algorithm}
-                      display={display}
-                      showPivotHints={settings.showPivotHints}
-                      tableFontSize={settings.tableFontSize}
-                      selection={isCurrent ? selection : null}
-                      compact={!isCurrent}
-                      showHeader={index === 0 || !entry.pivot}
-                      pivotMark={index < currentIndex ? history[index + 1]?.pivot : undefined}
-                      onPivot={isCurrent && mode === 'pivot' ? applyPivot : undefined}
-                      onHoverPivot={isCurrent && mode === 'pivot' ? setSelection : undefined}
-                      onChange={isCurrent && index === 0 ? replaceCurrent : undefined}
-                      onRemoveVariable={isCurrent && index === 0 ? (id) => safely(() => replaceCurrent(removeVariable(current, id))) : undefined}
-                      onRemoveConstraint={isCurrent && index === 0 ? (id) => safely(() => replaceCurrent(removeConstraint(current, id))) : undefined}
-                    />
-                  </article>
-                );
-              })}
+              {tableauStages.map((stage) => (
+                <section className="tableau-stage" key={stage.id} aria-label={stage.label ?? 'Simplex tableau'}>
+                  {stage.label && <header className="tableau-stage-heading"><strong>{stage.label}</strong></header>}
+                  <div className="tableau-stage-steps">
+                    {stage.entries.map(({ entry, index }, stageIndex) => {
+                      const isCurrent = index === currentIndex;
+                      const stepDescription = entry.pivot
+                        ? `${entry.label}. ${entry.pivot.enteringName} entered, ${entry.pivot.leavingName} left; pivot ${entry.pivot.pivotValue}.`
+                        : entry.label;
+                      return (
+                        <article
+                          key={entry.id}
+                          className={`tableau-step${isCurrent ? ' current' : ''}`}
+                          aria-label={`Step ${index}. ${stepDescription}`}
+                        >
+                          <TableauGrid
+                            tableau={entry.tableau}
+                            mode={isCurrent && index === 0 ? mode : 'pivot'}
+                            algorithm={algorithm}
+                            display={display}
+                            showPivotHints={settings.showPivotHints}
+                            tableFontSize={settings.tableFontSize}
+                            selection={isCurrent ? selection : null}
+                            compact={!isCurrent}
+                            showHeader={stageIndex === 0}
+                            pivotMark={index < currentIndex ? history[index + 1]?.pivot : undefined}
+                            onPivot={isCurrent && mode === 'pivot' ? applyPivot : undefined}
+                            onHoverPivot={isCurrent && mode === 'pivot' ? setSelection : undefined}
+                            onChange={isCurrent && index === 0 ? replaceCurrent : undefined}
+                            onRemoveVariable={isCurrent && index === 0 ? (id) => safely(() => replaceCurrent(removeVariable(current, id))) : undefined}
+                            onRemoveConstraint={isCurrent && index === 0 ? (id) => safely(() => replaceCurrent(removeConstraint(current, id))) : undefined}
+                          />
+                        </article>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
             </div>
             {mode === 'edit' && canEdit && (
               <footer className="tableau-card-footer">
                 <div><InfoIcon /><span>Press Enter to commit a cell. Use the arrow keys to move between cells.</span></div>
-                <span>{current.variables.length + 1} columns · {current.rows.length + 1} rows</span>
               </footer>
             )}
           </section>
         </main>
       ) : (
         <main className="history-main">
-          <HistoryView
-            history={history}
-            currentIndex={currentIndex}
-            display={display}
-            tableFontSize={settings.tableFontSize}
-            includeResult={includePrintResult}
-            onRestore={(index) => {
-              setCurrentIndex(index);
-              setSelection(null);
-              if (index > 0) setMode('pivot');
-            }}
+          <ProblemHistoryView
+            problems={problemHistory}
+            onOpen={resumeProblem}
+            onDelete={(id) => setProblemHistory((previous) => previous.filter((record) => record.id !== id))}
           />
         </main>
       )}
@@ -503,21 +572,36 @@ export default function App() {
         display={display}
         includeResult={includeExportResult}
         onIncludeResultChange={setIncludeExportResult}
+        includeSolution={includeExportSolution}
+        onIncludeSolutionChange={setIncludeExportSolution}
         onClose={() => setModal(null)}
         onNotice={showNotice}
-        onPrintHistory={(includeResult) => {
-          const returnView = view;
+        onPrintHistory={(includeResult, includeSolution) => {
           setIncludePrintResult(includeResult);
-          setView('history');
+          setPrintCompleteSolution(includeSolution);
+          setIsPrinting(true);
           window.setTimeout(() => {
             window.addEventListener('afterprint', () => {
               setIncludePrintResult(false);
-              setView(returnView);
+              setIsPrinting(false);
             }, { once: true });
             window.print();
           }, 120);
         }}
       />}
+      {isPrinting && (
+        <div className="print-solution-record" aria-hidden="true">
+          <SolutionHistoryView
+            history={printCompleteSolution ? history : history.slice(0, 1)}
+            currentIndex={printCompleteSolution ? currentIndex : 0}
+            display={display}
+            tableFontSize={settings.tableFontSize}
+            includeResult={includePrintResult}
+            resultTableau={current}
+            onRestore={() => undefined}
+          />
+        </div>
+      )}
       {notice && <div className="toast" role="status"><InfoIcon /><span>{notice}</span></div>}
     </div>
   );
