@@ -415,7 +415,7 @@ export default function App() {
                 <h1>{current.title}</h1>
               </div>
               <div className="tableau-meta">
-                <span>{current.rows.length} × {current.variables.length}</span>
+                <span>{current.rows.length} {current.rows.length === 1 ? 'constraint' : 'constraints'}, {current.variables.length} {current.variables.length === 1 ? 'variable' : 'variables'}</span>
                 {current.phase === 'phase1' && <span className="status-badge amber">Phase I · −w</span>}
               </div>
             </header>
