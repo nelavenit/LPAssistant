@@ -289,6 +289,8 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 3px s
 .variable-header.variable-slack::before { background: #4a9a7c; }
 .variable-header.variable-artificial::before { background: var(--accent); }
 .tableau-grid sub { font-size: .65em; vertical-align: -.22em; }
+.variable-name { display: inline; white-space: nowrap; }
+.variable-name sub { font-size: .65em; line-height: 0; vertical-align: -.28em; }
 .tableau-grid tbody tr:last-child td, .tableau-grid tbody tr:last-child th { border-bottom-color: var(--line-strong); }
 .objective-row th, .objective-row td { height: clamp(62px, calc(var(--table-font-size) * 4), 98px); background: color-mix(in srgb, var(--brand-soft) 58%, var(--surface)); border-bottom: 0; font-weight: 650; }
 .objective-row .sticky-left, .objective-row .sticky-right { background: color-mix(in srgb, var(--brand-soft) 74%, var(--surface)) !important; }
