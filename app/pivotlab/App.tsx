@@ -455,7 +455,6 @@ export default function App() {
             {mode === 'edit' && canEdit && (
               <footer className="tableau-card-footer">
                 <div><InfoIcon /><span>Press Enter to commit a cell. Use the arrow keys to move between cells.</span></div>
-                <span>{current.variables.length + 1} columns · {current.rows.length + 1} rows</span>
               </footer>
             )}
           </section>
