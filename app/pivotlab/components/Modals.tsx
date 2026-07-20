@@ -95,8 +95,8 @@ export function PhaseOneModal({ tableau, onClose, onStart }: PhaseOneModalProps)
   let artificialCounter = 1;
   tableau.rows.forEach((row) => {
     if (!selected.has(row.id)) return;
-    while (usedNames.has(`u${artificialCounter}`)) artificialCounter += 1;
-    const name = `u${artificialCounter}`;
+    while (usedNames.has(`z${artificialCounter}`)) artificialCounter += 1;
+    const name = `z${artificialCounter}`;
     artificialNames.set(row.id, name);
     usedNames.add(name);
     artificialCounter += 1;

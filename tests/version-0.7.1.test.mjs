@@ -39,7 +39,7 @@ test("0.7.1 zoom, scrolling, guidance, basis, and Phase I fixes are wired", asyn
   assert.match(grid, /className="basis-select-display"/);
   assert.match(css, /\.basis-select-display \{[^}]*justify-content: center;/s);
   assert.match(model, /kind === 'artificial' \? 'u'/);
-  assert.match(model, /name: `u\$\{artificialCounter\}`/);
+  assert.match(model, /name: `[uz]\$\{artificialCounter\}`/);
   assert.match(modal, /artificial variable/);
   assert.doesNotMatch(modal, /\+ a\{index \+ 1\}/);
   assert.match(readme, /Simplex Assistant 0\.7\.1/);

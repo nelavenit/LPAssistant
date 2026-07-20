@@ -216,7 +216,7 @@ export function detectBasis(tableau: Tableau): Tableau {
 
 export function addVariable(tableau: Tableau, kind: VariableKind = 'regular'): Tableau {
   const next = cloneTableau(tableau);
-  const prefix = kind === 'artificial' ? 'u' : kind === 'slack' ? 's' : 'x';
+  const prefix = kind === 'artificial' ? 'z' : kind === 'slack' ? 's' : 'x';
   const usedNames = new Set(next.variables.map((variable) => variable.name));
   let counter = 1;
   while (usedNames.has(`${prefix}${counter}`)) counter += 1;
@@ -277,10 +277,10 @@ export function startPhaseOne(tableau: Tableau, selectedRowIds: string[]): Table
   const names = new Set(next.variables.map((variable) => variable.name));
   for (const row of next.rows) {
     if (!selected.has(row.id)) continue;
-    while (names.has(`u${artificialCounter}`)) artificialCounter += 1;
+    while (names.has(`z${artificialCounter}`)) artificialCounter += 1;
     const variable: TableauVariable = {
       id: makeId('art'),
-      name: `u${artificialCounter}`,
+      name: `z${artificialCounter}`,
       kind: 'artificial',
     };
     names.add(variable.name);
