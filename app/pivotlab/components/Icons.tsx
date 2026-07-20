@@ -18,6 +18,7 @@ export const SettingsIcon = (props: IconProps) => <IconBase {...props}><circle c
 export const FolderIcon = (props: IconProps) => <IconBase {...props}><path d="M3 6.5h6l2 2h10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" /></IconBase>;
 export const SaveIcon = (props: IconProps) => <IconBase {...props}><path d="M5 3h12l3 3v15H4V4a1 1 0 0 1 1-1Z" /><path d="M8 3v6h8V3M8 21v-7h8v7" /></IconBase>;
 export const ExportIcon = (props: IconProps) => <IconBase {...props}><path d="M12 3v12m0-12-4 4m4-4 4 4" /><path d="M5 12v8h14v-8" /></IconBase>;
+export const CopyIcon = (props: IconProps) => <IconBase {...props}><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" /></IconBase>;
 export const TrashIcon = (props: IconProps) => <IconBase {...props}><path d="M4 7h16M9 3h6l1 4H8l1-4Zm-3 4 1 14h10l1-14" /></IconBase>;
 export const SparkIcon = (props: IconProps) => <IconBase {...props}><path d="m12 3 1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3Z" /><path d="m18.5 15 .8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2Z" /></IconBase>;
 export const HistoryIcon = (props: IconProps) => <IconBase {...props}><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5M12 7v5l3 2" /></IconBase>;

@@ -6,7 +6,7 @@ import type { NumberDisplay } from '../math/rational';
 import type { Tableau } from '../model/tableau';
 import { exportCsv, exportLatex, exportMarkdown, serializeProject } from '../model/project';
 import type { HistoryEntry } from '../model/tableau';
-import { CheckIcon, ExportIcon, GridIcon, KeyboardIcon, SaveIcon, SparkIcon, XIcon } from './Icons';
+import { CheckIcon, CopyIcon, GridIcon, KeyboardIcon, SaveIcon, SparkIcon, XIcon } from './Icons';
 import { VariableName } from './VariableName';
 
 interface ModalProps {
@@ -298,7 +298,7 @@ export function ExportModal({
           </div>
           <textarea className="export-preview" readOnly value={content} aria-label="Export preview" onFocus={(event) => event.currentTarget.select()} />
           <div className="button-row">
-            <button className="primary-button" type="button" onClick={copy}><ExportIcon /> Copy</button>
+            <button className="primary-button" type="button" onClick={copy}><CopyIcon /> Copy</button>
             <button className="secondary-button" type="button" onClick={() => downloadText(`${safeName(tableau.title)}.${extension}`, content)}><SaveIcon /> Download</button>
           </div>
         </div>
