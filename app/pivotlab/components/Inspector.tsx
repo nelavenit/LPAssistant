@@ -211,7 +211,7 @@ function PivotHoverIcon() {
         <text x="53" y="99">3</text>
         <text x="127" y="99">5</text>
       </g>
-      <path d="M139 108v20l4.5-4.7 4.6 9.5 4.2-2-4.6-9.4h6.8Z" fill="#fff" stroke="#202725" strokeWidth="1.35" strokeLinejoin="round" filter="url(#pivot-pointer-shadow)" />
+      <path d="M140 110v16l3.6-3.8 3.7 7.6 3.3-1.6-3.7-7.5h5.5Z" fill="#fff" stroke="#202725" strokeWidth="1.15" strokeLinejoin="round" filter="url(#pivot-pointer-shadow)" />
     </svg>
   );
 }
