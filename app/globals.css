@@ -240,6 +240,7 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 3px s
 .section-title-row h3, .settings-section h3 { margin: 0; font-size: .92rem; letter-spacing: -.015em; }
 .phase-card p { color: var(--muted); font-size: .82rem; line-height: 1.5; }
 .phase-card .primary-button { width: 100%; }
+.pivot-phase-card { margin-bottom: 18px; }
 .quiet-note { display: flex; align-items: flex-start; gap: 8px; margin-top: 16px; padding: 10px; border-radius: 9px; background: var(--surface-soft); color: var(--muted); font-size: .8rem; line-height: 1.45; }
 .quiet-note svg { width: 16px; height: 16px; flex: 0 0 auto; margin-top: 1px; color: var(--brand); }
 
