@@ -4,7 +4,7 @@ import { HistoryIcon } from './Icons';
 import { SolutionResult } from './SolutionResult';
 import { TableauGrid } from './TableauGrid';
 
-interface HistoryViewProps {
+interface SolutionHistoryViewProps {
   history: HistoryEntry[];
   currentIndex: number;
   display: NumberDisplay;
@@ -13,7 +13,7 @@ interface HistoryViewProps {
   includeResult?: boolean;
 }
 
-export function HistoryView({ history, currentIndex, display, tableFontSize = 18, onRestore, includeResult = false }: HistoryViewProps) {
+export function SolutionHistoryView({ history, currentIndex, display, tableFontSize = 18, onRestore, includeResult = false }: SolutionHistoryViewProps) {
   return (
     <section className="history-view">
       <div className="history-intro">

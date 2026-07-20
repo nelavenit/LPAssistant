@@ -22,7 +22,7 @@ import {
   type Tableau,
 } from './model/tableau';
 import { deserializeProject, serializeProject } from './model/project';
-import { HistoryView } from './components/HistoryView';
+import { SolutionHistoryView } from './components/HistoryView';
 import {
   ExportIcon,
   FolderIcon,
@@ -99,6 +99,7 @@ export default function App() {
   const [settings, setSettings] = useState<AppSettings>(loadSettings);
   const [modal, setModal] = useState<ModalName>(null);
   const [includePrintResult, setIncludePrintResult] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
   const [includeExportResult, setIncludeExportResult] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
@@ -490,7 +491,7 @@ export default function App() {
         </main>
       ) : (
         <main className="history-main">
-          <HistoryView
+          <SolutionHistoryView
             history={history}
             currentIndex={currentIndex}
             display={display}
@@ -534,18 +535,29 @@ export default function App() {
         onClose={() => setModal(null)}
         onNotice={showNotice}
         onPrintHistory={(includeResult) => {
-          const returnView = view;
           setIncludePrintResult(includeResult);
-          setView('history');
+          setIsPrinting(true);
           window.setTimeout(() => {
             window.addEventListener('afterprint', () => {
               setIncludePrintResult(false);
-              setView(returnView);
+              setIsPrinting(false);
             }, { once: true });
             window.print();
           }, 120);
         }}
       />}
+      {isPrinting && (
+        <div className="print-solution-record" aria-hidden="true">
+          <SolutionHistoryView
+            history={history}
+            currentIndex={currentIndex}
+            display={display}
+            tableFontSize={settings.tableFontSize}
+            includeResult={includePrintResult}
+            onRestore={() => undefined}
+          />
+        </div>
+      )}
       {notice && <div className="toast" role="status"><InfoIcon /><span>{notice}</span></div>}
     </div>
   );
