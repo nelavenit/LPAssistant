@@ -178,6 +178,10 @@ export function SettingsModal({ settings, onChange, onClose }: SettingsModalProp
             <span className="custom-checkbox"><CheckIcon /></span>
             <span><strong>Show pivot guidance</strong><small>Display ratio popovers, minimum markers, and eligibility messages. Primal and dual mode explanations always remain visible.</small></span>
           </label>
+          <button className="text-button settings-reset" type="button" onClick={() => onChange({
+            ...defaultSettings,
+            shortcuts: settings.shortcuts,
+          })}>Restore appearance defaults</button>
           <section className="about-simplex-assistant">
             <span className="eyebrow">About</span>
             <h3>Simplex Assistant 0.7.1</h3>
@@ -214,7 +218,10 @@ export function SettingsModal({ settings, onChange, onClose }: SettingsModalProp
             })}
           </div>
           {conflicts.size > 0 && <p className="settings-warning">Duplicate shortcuts are highlighted. Only the first matching command will run.</p>}
-          <button className="text-button" type="button" onClick={() => onChange(defaultSettings)}>Restore defaults</button>
+          <button className="text-button settings-reset" type="button" onClick={() => onChange({
+            ...settings,
+            shortcuts: { ...defaultSettings.shortcuts },
+          })}>Restore shortcut defaults</button>
         </section>
       </div>
       <footer className="modal-footer"><button className="primary-button" type="button" onClick={onClose}>Done</button></footer>

@@ -455,6 +455,7 @@ kbd { display: inline-flex; min-height: 22px; align-items: center; padding: 2px 
 .settings-toggle > span:last-child { display: grid; gap: 3px; }
 .settings-toggle strong { font-size: .8rem; }
 .settings-toggle small { color: var(--muted); font-size: .73rem; line-height: 1.4; }
+.settings-reset { margin-top: 14px; }
 .shortcut-settings { padding-left: 28px; border-left: 1px solid var(--line); }
 .shortcut-settings .section-title-row > svg { color: var(--brand); }
 .shortcut-settings .section-title-row p { margin: 4px 0 0; color: var(--muted); font-size: .78rem; }
