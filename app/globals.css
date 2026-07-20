@@ -209,9 +209,7 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 3px s
 .control-tooltip::before { content: ""; position: absolute; left: 22px; top: -5px; width: 8px; height: 8px; border-left: 1px solid color-mix(in srgb, var(--brand) 35%, var(--line)); border-top: 1px solid color-mix(in srgb, var(--brand) 35%, var(--line)); background: var(--surface-raised); transform: rotate(45deg); }
 .disabled-edit-tip.visible:hover .control-tooltip, .disabled-edit-tip.visible:focus-within .control-tooltip { opacity: 1; visibility: visible; transform: translateY(0); }
 .compact-control button { min-width: 60px; height: 32px; padding: 0 10px; display: grid; place-items: center; }
-.display-fraction-sample { width: 2.15em; height: 1.1em; display: grid; grid-template-columns: 1fr .18em 1fr; align-items: center; justify-items: center; line-height: 1; overflow: visible; }
-.display-fraction-sample > span:not(.display-fraction-slash) { min-width: .65em; text-align: center; }
-.display-fraction-slash { width: 1.4px; height: 1.18em; border-radius: 999px; background: currentColor; transform: rotate(24deg); transform-origin: center; }
+.display-fraction-sample { display: inline; white-space: nowrap; line-height: 1; }
 .count-pill { min-width: 19px; height: 19px; border-radius: 10px; display: grid; place-items: center; padding: 0 5px; background: var(--surface-muted); font-size: .74rem; }
 .command-divider { height: 26px; width: 1px; background: var(--line); flex: 0 0 auto; }
 .command-spacer { flex: 1 1 auto; }
