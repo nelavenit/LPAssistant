@@ -288,19 +288,14 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 3px s
 .tableau-grid col.basis-col { width: var(--table-side-width, 90px); }
 .tableau-grid col.variable-col { width: var(--table-variable-width, 92px); }
 .tableau-grid col.rhs-col { width: var(--table-side-width, 90px); }
-.tableau-grid col.row-actions-col { width: 48px; }
 .tableau-grid th, .tableau-grid td { position: relative; min-width: var(--table-variable-width, 92px); height: clamp(58px, calc(var(--table-font-size) * 3.9), 96px); padding: 7px 8px; text-align: center; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--surface); transition: background .09s ease; }
 .tableau-grid thead th { height: 46px; min-height: 46px; padding: 7px 9px; position: sticky; top: 0; z-index: 6; background: var(--surface-soft); color: var(--ink-soft); font-size: var(--table-font-size); font-weight: 700; }
 .tableau-grid .basis-column, .tableau-grid .basis-cell, .tableau-grid .objective-name { min-width: var(--table-side-width, 90px); max-width: 140px; }
 .tableau-grid .rhs-column, .tableau-grid .rhs-cell, .tableau-grid .objective-rhs { min-width: var(--table-side-width, 90px); border-left: 2px solid var(--line-strong); font-weight: 700; }
 .tableau-grid .ratio-column, .tableau-grid .ratio-cell { min-width: 94px; background: var(--surface-soft); border-left: 1px dashed var(--line-strong); }
-.tableau-grid .row-actions-column, .tableau-grid .row-actions-cell { min-width: 48px; width: 48px; position: sticky; right: 0; z-index: 6; background: var(--surface-soft); }
-.tableau-grid .row-actions-column::after, .tableau-grid .row-actions-cell::after { content: ""; position: absolute; top: 0; right: -2px; bottom: 0; width: 2px; background: inherit; }
 .sticky-left { position: sticky !important; left: 0; z-index: 5; border-right: 2px solid var(--line-strong) !important; }
 .sticky-right { position: sticky !important; right: 0; z-index: 5; }
 .tableau-grid:has(.ratio-column) .sticky-right { right: 94px; }
-.tableau-grid:has(.row-actions-column) .sticky-right { right: 48px; }
-.tableau-grid thead .row-actions-column { z-index: 9; }
 .tableau-grid thead .sticky-left, .tableau-grid thead .sticky-right { z-index: 8; }
 .basis-cell, .objective-name { font-size: inherit; background: var(--surface-soft) !important; }
 .empty-basis { color: var(--faint); }
@@ -348,6 +343,9 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 3px s
 .header-meta { display: flex; align-items: center; justify-content: center; gap: 2px; }
 .header-meta select { max-width: 76px; height: 23px; padding: 1px 2px; border-color: var(--line); color: var(--muted); font-size: .55rem; background: var(--surface); }
 .basis-select-wrap { position: relative; display: block; width: 100%; }
+.basis-edit-controls { display: flex; align-items: center; justify-content: center; gap: 4px; width: 100%; }
+.basis-edit-controls .basis-select-wrap { min-width: 0; flex: 1 1 auto; }
+.basis-row-remove { flex: 0 0 auto; }
 .basis-cell select { width: 100%; height: 34px; padding: 0 28px; border-color: var(--line); background: var(--surface); appearance: none; text-align: center; text-align-last: center; }
 .basis-native-select { color: transparent; }
 .basis-native-select option { color: var(--ink); text-align: center; }

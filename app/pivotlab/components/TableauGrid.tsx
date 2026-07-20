@@ -51,8 +51,8 @@ export function TableauGrid({
     : null;
   const editable = mode === 'edit' && Boolean(onChange) && !compact;
   const variableWidth = Math.max(82, Math.min(148, Math.round(tableFontSize * 5.1)));
-  const sideWidth = Math.max(88, Math.min(140, Math.round(tableFontSize * 5)));
-  const tableMinimumWidth = sideWidth * 2 + tableau.variables.length * variableWidth + (editable ? 48 : 0);
+  const sideWidth = Math.max(editable ? 120 : 88, Math.min(140, Math.round(tableFontSize * 5)));
+  const tableMinimumWidth = sideWidth * 2 + tableau.variables.length * variableWidth;
 
   const update = (mutator: (next: Tableau) => void) => {
     if (!onChange) return;
@@ -82,7 +82,6 @@ export function TableauGrid({
           <col className="basis-col" />
           {tableau.variables.map((variable) => <col key={variable.id} className="variable-col" />)}
           <col className="rhs-col" />
-          {editable && <col className="row-actions-col" />}
         </colgroup>
         {showHeader && (
           <thead>
@@ -129,7 +128,6 @@ export function TableauGrid({
                 </th>
               ))}
               <th className="rhs-column sticky-right">RHS</th>
-              {editable && <th className="row-actions-column" aria-label="Row actions" />}
             </tr>
           </thead>
         )}
@@ -141,24 +139,33 @@ export function TableauGrid({
               <tr key={row.id} className={isHoveredRow ? 'row-hover' : ''}>
                 <th className="basis-cell sticky-left" scope="row">
                   {editable ? (
-                    <span className="basis-select-wrap">
-                      <select
-                        className="basis-native-select"
-                        value={row.basisId ?? ''}
-                        aria-label={`Basic variable in row ${rowIndex + 1}`}
-                        onChange={(event) => update((next) => {
-                          next.rows[rowIndex].basisId = event.target.value || null;
-                        })}
-                      >
-                        <option value="">—</option>
-                        {tableau.variables.map((variable) => (
-                          <option key={variable.id} value={variable.id}>{variable.name}</option>
-                        ))}
-                      </select>
-                      <span className="basis-select-display" aria-hidden="true">{basisName
-                        ? <VariableName name={basisName} />
-                        : <span className="empty-basis">—</span>}</span>
-                      <ChevronIcon />
+                    <span className="basis-edit-controls">
+                      <span className="basis-select-wrap">
+                        <select
+                          className="basis-native-select"
+                          value={row.basisId ?? ''}
+                          aria-label={`Basic variable in row ${rowIndex + 1}`}
+                          onChange={(event) => update((next) => {
+                            next.rows[rowIndex].basisId = event.target.value || null;
+                          })}
+                        >
+                          <option value="">—</option>
+                          {tableau.variables.map((variable) => (
+                            <option key={variable.id} value={variable.id}>{variable.name}</option>
+                          ))}
+                        </select>
+                        <span className="basis-select-display" aria-hidden="true">{basisName
+                          ? <VariableName name={basisName} />
+                          : <span className="empty-basis">—</span>}</span>
+                        <ChevronIcon />
+                      </span>
+                      <button
+                        className="icon-button tiny danger-quiet basis-row-remove"
+                        type="button"
+                        title={`Remove constraint ${rowIndex + 1}`}
+                        aria-label={`Remove constraint ${rowIndex + 1}`}
+                        onClick={() => onRemoveConstraint?.(row.id)}
+                      ><TrashIcon /></button>
                     </span>
                   ) : basisName ? <VariableName name={basisName} /> : <span className="empty-basis">—</span>}
                 </th>
@@ -241,17 +248,6 @@ export function TableauGrid({
                     <NumberValue value={row.values[tableau.variables.length]} display={display} />
                   )}
                 </td>
-                {editable && (
-                  <td className="row-actions-cell">
-                    <button
-                      className="icon-button danger-quiet"
-                      type="button"
-                      title={`Remove constraint ${rowIndex + 1}`}
-                      aria-label={`Remove constraint ${rowIndex + 1}`}
-                      onClick={() => onRemoveConstraint?.(row.id)}
-                    ><TrashIcon /></button>
-                  </td>
-                )}
               </tr>
             );
           })}
@@ -293,7 +289,6 @@ export function TableauGrid({
                 />
               ) : <NumberValue value={tableau.objective[tableau.variables.length]} display={display} />}
             </td>
-            {editable && <td className="row-actions-cell" />}
           </tr>
         </tfoot>
       </table>
