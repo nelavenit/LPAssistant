@@ -54,7 +54,7 @@ export function NewProjectModal({ onClose, onCreate, onLoadExample }: NewProject
   const [variables, setVariables] = useState(5);
   const [title, setTitle] = useState('Untitled tableau');
   return (
-    <Modal title="New tableau" eyebrow="Start fresh" onClose={onClose}>
+    <Modal title="New tableau" onClose={onClose}>
       <div className="modal-body">
         <button className="example-card" type="button" onClick={onLoadExample}>
           <div className="example-icon"><GridIcon /></div>
