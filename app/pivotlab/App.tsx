@@ -22,6 +22,7 @@ import {
   type Tableau,
 } from './model/tableau';
 import { deserializeProject, serializeProject } from './model/project';
+import { groupTableauStages } from './model/stages';
 import {
   createProblemHistoryRecord,
   loadProblemHistory,
@@ -359,6 +360,7 @@ export default function App() {
   });
 
   const numberMode = display.mode;
+  const tableauStages = groupTableauStages(history, currentIndex);
 
   return (
     <div className={`app-shell${view === 'workspace' ? ' workspace-open' : ''}`}>
@@ -486,37 +488,44 @@ export default function App() {
               </div>
             </header>
             <div className="tableau-sequence">
-              {history.slice(0, currentIndex + 1).map((entry, index) => {
-                const isCurrent = index === currentIndex;
-                const stepDescription = entry.pivot
-                  ? `${entry.label}. ${entry.pivot.enteringName} entered, ${entry.pivot.leavingName} left; pivot ${entry.pivot.pivotValue}.`
-                  : entry.label;
-                return (
-                  <article
-                    key={entry.id}
-                    className={`tableau-step${isCurrent ? ' current' : ''}`}
-                    aria-label={`Step ${index}. ${stepDescription}`}
-                  >
-                    <TableauGrid
-                      tableau={entry.tableau}
-                      mode={isCurrent && index === 0 ? mode : 'pivot'}
-                      algorithm={algorithm}
-                      display={display}
-                      showPivotHints={settings.showPivotHints}
-                      tableFontSize={settings.tableFontSize}
-                      selection={isCurrent ? selection : null}
-                      compact={!isCurrent}
-                      showHeader={index === 0 || !entry.pivot}
-                      pivotMark={index < currentIndex ? history[index + 1]?.pivot : undefined}
-                      onPivot={isCurrent && mode === 'pivot' ? applyPivot : undefined}
-                      onHoverPivot={isCurrent && mode === 'pivot' ? setSelection : undefined}
-                      onChange={isCurrent && index === 0 ? replaceCurrent : undefined}
-                      onRemoveVariable={isCurrent && index === 0 ? (id) => safely(() => replaceCurrent(removeVariable(current, id))) : undefined}
-                      onRemoveConstraint={isCurrent && index === 0 ? (id) => safely(() => replaceCurrent(removeConstraint(current, id))) : undefined}
-                    />
-                  </article>
-                );
-              })}
+              {tableauStages.map((stage) => (
+                <section className="tableau-stage" key={stage.id} aria-label={stage.label ?? 'Simplex tableau'}>
+                  {stage.label && <header className="tableau-stage-heading"><strong>{stage.label}</strong></header>}
+                  <div className="tableau-stage-steps">
+                    {stage.entries.map(({ entry, index }, stageIndex) => {
+                      const isCurrent = index === currentIndex;
+                      const stepDescription = entry.pivot
+                        ? `${entry.label}. ${entry.pivot.enteringName} entered, ${entry.pivot.leavingName} left; pivot ${entry.pivot.pivotValue}.`
+                        : entry.label;
+                      return (
+                        <article
+                          key={entry.id}
+                          className={`tableau-step${isCurrent ? ' current' : ''}`}
+                          aria-label={`Step ${index}. ${stepDescription}`}
+                        >
+                          <TableauGrid
+                            tableau={entry.tableau}
+                            mode={isCurrent && index === 0 ? mode : 'pivot'}
+                            algorithm={algorithm}
+                            display={display}
+                            showPivotHints={settings.showPivotHints}
+                            tableFontSize={settings.tableFontSize}
+                            selection={isCurrent ? selection : null}
+                            compact={!isCurrent}
+                            showHeader={stageIndex === 0}
+                            pivotMark={index < currentIndex ? history[index + 1]?.pivot : undefined}
+                            onPivot={isCurrent && mode === 'pivot' ? applyPivot : undefined}
+                            onHoverPivot={isCurrent && mode === 'pivot' ? setSelection : undefined}
+                            onChange={isCurrent && index === 0 ? replaceCurrent : undefined}
+                            onRemoveVariable={isCurrent && index === 0 ? (id) => safely(() => replaceCurrent(removeVariable(current, id))) : undefined}
+                            onRemoveConstraint={isCurrent && index === 0 ? (id) => safely(() => replaceCurrent(removeConstraint(current, id))) : undefined}
+                          />
+                        </article>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
             </div>
             {mode === 'edit' && canEdit && (
               <footer className="tableau-card-footer">

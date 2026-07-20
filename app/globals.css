@@ -267,10 +267,15 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 3px s
 .tableau-card-header h1 { margin: 0; font-size: 1.12rem; letter-spacing: -.02em; }
 .tableau-meta { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 6px; }
 .tableau-meta > span:first-child { color: var(--muted); font-size: .8rem; font-variant-numeric: tabular-nums; margin-right: 5px; }
-.tableau-sequence { flex: 1; min-height: 0; display: grid; align-content: start; max-width: 100%; overflow: auto; background: var(--surface-soft); scrollbar-color: var(--line-strong) transparent; }
+.tableau-sequence { flex: 1; min-height: 0; display: grid; align-content: start; max-width: 100%; padding: 0 0 20px; overflow: auto; background: var(--surface-soft); scrollbar-color: var(--line-strong) transparent; }
+.tableau-stage { min-width: max(100%, var(--table-min-width, 0px)); background: var(--surface); }
+.tableau-stage + .tableau-stage { margin-top: 20px; border-top: 1px solid var(--line-strong); }
+.tableau-stage-heading { position: sticky; left: 0; width: 100%; min-height: 38px; display: flex; align-items: center; padding: 8px 14px; border-bottom: 1px solid var(--line); background: var(--surface-muted); color: var(--ink-soft); }
+.tableau-stage-heading strong { font-size: .76rem; letter-spacing: .055em; text-transform: uppercase; }
+.tableau-stage-steps { min-width: 100%; }
 .tableau-step { min-width: 100%; align-self: start; background: var(--surface); }
-.tableau-step + .tableau-step { border-top: 4px solid var(--line-strong); }
-.tableau-step.current { box-shadow: inset 2px 0 0 var(--brand); }
+.tableau-step + .tableau-step { border-top: 2px solid var(--line-strong); }
+.tableau-step.current { box-shadow: none; }
 .tableau-step:last-child { border-bottom: 1px solid var(--line); }
 .tableau-sequence .tableau-scroll { width: 100%; min-width: var(--table-min-width); max-width: none; min-height: 0; max-height: none; overflow: visible; }
 .tableau-sequence .tableau-grid th, .tableau-sequence .tableau-grid td { height: clamp(50px, calc(var(--table-font-size) * 3.1), 74px); }
