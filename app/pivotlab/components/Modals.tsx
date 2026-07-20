@@ -171,7 +171,7 @@ export function SettingsModal({ settings, onChange, onClose }: SettingsModalProp
           </label>
           <label className="slider-label">
             <span>Interface scale <strong>{settings.uiScale}%</strong></span>
-            <input type="range" min="85" max="150" step="5" value={settings.uiScale} onChange={(event) => onChange({ ...settings, uiScale: Number(event.target.value) })} />
+            <input type="range" min="75" max="150" step="5" value={settings.uiScale} onChange={(event) => onChange({ ...settings, uiScale: Number(event.target.value) })} />
           </label>
           <label className="settings-toggle">
             <input type="checkbox" checked={settings.showPivotHints} onChange={(event) => onChange({ ...settings, showPivotHints: event.target.checked })} />

@@ -78,7 +78,7 @@ export function loadSettings(): AppSettings {
       ...defaultSettings,
       ...stored,
       tableFontSize: clamp(Number(stored.tableFontSize ?? defaultSettings.tableFontSize), 12, 30),
-      uiScale: clamp(Number(stored.uiScale ?? defaultSettings.uiScale), 85, 150),
+      uiScale: clamp(Number(stored.uiScale ?? defaultSettings.uiScale), 75, 150),
       showPivotHints: stored.showPivotHints === true,
       shortcuts: { ...defaultSettings.shortcuts, ...storedShortcuts },
     };
