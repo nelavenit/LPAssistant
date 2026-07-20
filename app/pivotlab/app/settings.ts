@@ -26,8 +26,8 @@ export interface AppSettings {
 export const shortcutLabels: Record<ShortcutAction, string> = {
   toggleMode: 'Toggle Edit / Pivot mode',
   applyPivot: 'Apply hovered pivot',
-  undo: 'Previous tableau',
-  redo: 'Next tableau',
+  undo: 'Undo edit / previous tableau',
+  redo: 'Redo edit / next tableau',
   newProject: 'New tableau',
   openProject: 'Open project',
   saveProject: 'Save project',

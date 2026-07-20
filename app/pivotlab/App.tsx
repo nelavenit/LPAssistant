@@ -89,6 +89,8 @@ export default function App() {
   const session = useMemo(() => initialSession(), []);
   const [history, setHistory] = useState<HistoryEntry[]>(session.history);
   const [currentIndex, setCurrentIndex] = useState(session.currentIndex);
+  const [editHistory, setEditHistory] = useState<Tableau[]>([session.history[0].tableau]);
+  const [editIndex, setEditIndex] = useState(0);
   const [mode, setMode] = useState<AppMode>('pivot');
   const [algorithm, setAlgorithm] = useState<Algorithm>('primal');
   const [view, setView] = useState<View>('workspace');
@@ -139,6 +141,10 @@ export default function App() {
   }, []);
 
   const replaceCurrent = (tableau: Tableau) => {
+    // Edits and pivots intentionally use separate timelines. Editing step zero
+    // invalidates later pivots, while its own redo snapshots remain available.
+    setEditHistory((previous) => [...previous.slice(0, editIndex + 1), tableau]);
+    setEditIndex((index) => index + 1);
     setHistory((previous) => {
       const next = previous.slice(0, currentIndex + 1);
       next[currentIndex] = { ...next[currentIndex], tableau };
@@ -160,6 +166,8 @@ export default function App() {
   const reset = (tableau: Tableau) => {
     setHistory([{ id: makeId('history'), label: 'Initial tableau', tableau }]);
     setCurrentIndex(0);
+    setEditHistory([tableau]);
+    setEditIndex(0);
     setSelection(null);
     setView('workspace');
     setMode('edit');
@@ -181,11 +189,29 @@ export default function App() {
   });
 
   const previousStep = () => {
+    if (mode === 'edit' && canEdit) {
+      if (editIndex <= 0) return;
+      const nextIndex = editIndex - 1;
+      const tableau = editHistory[nextIndex];
+      setEditIndex(nextIndex);
+      setHistory((previous) => [{ ...previous[0], tableau }]);
+      setSelection(null);
+      return;
+    }
     if (currentIndex <= 0) return;
     setCurrentIndex((index) => index - 1);
     setSelection(null);
   };
   const nextStep = () => {
+    if (mode === 'edit' && canEdit) {
+      if (editIndex >= editHistory.length - 1) return;
+      const nextIndex = editIndex + 1;
+      const tableau = editHistory[nextIndex];
+      setEditIndex(nextIndex);
+      setHistory((previous) => [{ ...previous[0], tableau }]);
+      setSelection(null);
+      return;
+    }
     if (currentIndex >= history.length - 1) return;
     setMode('pivot');
     setCurrentIndex((index) => index + 1);
@@ -264,7 +290,8 @@ export default function App() {
         return;
       }
       const isEditing = target?.matches('input, textarea, select, [contenteditable="true"]');
-      if (isEditing && action !== 'addConstraint' && action !== 'addVariable') return;
+      const editTimelineAction = mode === 'edit' && (action === 'undo' || action === 'redo');
+      if (isEditing && action !== 'addConstraint' && action !== 'addVariable' && !editTimelineAction) return;
       event.preventDefault();
       event.stopPropagation();
       if (isEditing) target?.blur();
@@ -283,9 +310,11 @@ export default function App() {
       const loaded = deserializeProject(await file.text());
       setHistory(loaded.history);
       setCurrentIndex(loaded.currentIndex);
+      setEditHistory([loaded.history[0].tableau]);
+      setEditIndex(0);
       setSelection(null);
       setView('workspace');
-      if (loaded.currentIndex > 0) setMode('pivot');
+      setMode(loaded.currentIndex > 0 ? 'pivot' : 'edit');
       showNotice('Project opened.');
     } catch (caught) {
       showNotice(caught instanceof Error ? caught.message : 'The project could not be opened.');
@@ -370,9 +399,9 @@ export default function App() {
           </span>
         </div>
         <div className="undo-controls">
-          <button className="icon-button" type="button" disabled={currentIndex === 0} onClick={previousStep} title={`Previous tableau · ${settings.shortcuts.undo}`}><UndoIcon /></button>
-          <span>{currentIndex + 1} / {history.length}</span>
-          <button className="icon-button" type="button" disabled={currentIndex === history.length - 1} onClick={nextStep} title={`Next tableau · ${settings.shortcuts.redo}`}><RedoIcon /></button>
+          <button className="icon-button" type="button" disabled={mode === 'edit' ? editIndex === 0 : currentIndex === 0} onClick={previousStep} title={`${mode === 'edit' ? 'Undo edit' : 'Previous tableau'} · ${settings.shortcuts.undo}`}><UndoIcon /></button>
+          <span>{mode === 'edit' ? `${editIndex + 1} / ${editHistory.length}` : `${currentIndex + 1} / ${history.length}`}</span>
+          <button className="icon-button" type="button" disabled={mode === 'edit' ? editIndex === editHistory.length - 1 : currentIndex === history.length - 1} onClick={nextStep} title={`${mode === 'edit' ? 'Redo edit' : 'Next tableau'} · ${settings.shortcuts.redo}`}><RedoIcon /></button>
         </div>
       </nav>
 
