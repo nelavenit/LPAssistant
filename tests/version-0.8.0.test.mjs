@@ -181,6 +181,21 @@ test('light and dark theme tokens, inspector art, controls, and print frames ret
   assert.doesNotMatch(readme, /clearly named|tableau-only scrolling|persistent Pivot Inspector/i);
 });
 
+test('release metadata and offline cache identify version 0.8.0', async () => {
+  const [pkg, lock, readme, modal, worker] = await Promise.all([
+    readFile(new URL('../package.json', import.meta.url), 'utf8'),
+    readFile(new URL('../package-lock.json', import.meta.url), 'utf8'),
+    readFile(new URL('../README.md', import.meta.url), 'utf8'),
+    readFile(new URL('../app/pivotlab/components/Modals.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../public/sw.js', import.meta.url), 'utf8'),
+  ]);
+  assert.match(pkg, /"version": "0\.8\.0"/);
+  assert.match(lock, /"version": "0\.8\.0"/);
+  assert.match(readme, /Simplex Assistant 0\.8\.0/);
+  assert.match(modal, /Simplex Assistant 0\.8\.0/);
+  assert.match(worker, /simplex-assistant-shell-v12/);
+});
+
 function contrast(first, second) {
   const luminance = (hex) => {
     const channels = [1, 3, 5].map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16) / 255)

@@ -189,7 +189,7 @@ export function SettingsModal({ settings, onChange, onClose }: SettingsModalProp
           })}>Restore appearance defaults</button>
           <section className="about-simplex-assistant">
             <span className="eyebrow">About</span>
-            <h3>Simplex Assistant 0.7.1</h3>
+            <h3>Simplex Assistant 0.8.0</h3>
             <p>This manual simplex-method practice tool keeps every pivot decision yours; only zero entries are forbidden.</p>
             <p>All calculations use arbitrary-precision rational arithmetic.</p>
           </section>
