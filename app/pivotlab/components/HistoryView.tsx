@@ -1,6 +1,8 @@
 import type { NumberDisplay } from '../math/rational';
 import type { ProblemHistoryRecord } from '../model/problemHistory';
+import { groupTableauStages } from '../model/stages';
 import type { HistoryEntry } from '../model/tableau';
+import type { Tableau } from '../model/tableau';
 import { FolderIcon, HistoryIcon, TrashIcon } from './Icons';
 import { SolutionResult } from './SolutionResult';
 import { TableauGrid } from './TableauGrid';
@@ -12,9 +14,11 @@ interface SolutionHistoryViewProps {
   tableFontSize?: number;
   onRestore: (index: number) => void;
   includeResult?: boolean;
+  resultTableau?: Tableau;
 }
 
-export function SolutionHistoryView({ history, currentIndex, display, tableFontSize = 18, onRestore, includeResult = false }: SolutionHistoryViewProps) {
+export function SolutionHistoryView({ history, currentIndex, display, tableFontSize = 18, onRestore, includeResult = false, resultTableau }: SolutionHistoryViewProps) {
+  const stages = groupTableauStages(history, currentIndex);
   return (
     <section className="history-view">
       <div className="history-intro">
@@ -26,32 +30,39 @@ export function SolutionHistoryView({ history, currentIndex, display, tableFontS
         </div>
       </div>
       <div className="history-list">
-        {history.map((entry, index) => (
-          <article key={entry.id} className={`history-card${index === currentIndex ? ' current' : ''}`}>
-            <header>
-              <div className="step-number">{index}</div>
-              <div>
-                <h3>{entry.label}</h3>
-                {entry.pivot && (
-                  <p><strong>{entry.pivot.enteringName}</strong> entered, <strong>{entry.pivot.leavingName}</strong> left · pivot {entry.pivot.pivotValue}</p>
-                )}
-              </div>
-              {index === currentIndex
-                ? <span className="status-badge green">Current</span>
-                : <button className="text-button restore-step" type="button" onClick={() => onRestore(index)}>Open step</button>}
-            </header>
-            <TableauGrid
-              tableau={entry.tableau}
-              display={display}
-              tableFontSize={tableFontSize}
-              compact
-              showHeader={index === 0 || !entry.pivot}
-              pivotMark={history[index + 1]?.pivot}
-            />
-          </article>
+        {stages.map((stage) => (
+          <section className="solution-stage" key={stage.id}>
+            {stage.label && <h3 className="solution-stage-label">{stage.label}</h3>}
+            <div className="solution-stage-tableaux">
+              {stage.entries.map(({ entry, index }, stageIndex) => (
+                <article key={entry.id} className={`history-card${index === currentIndex ? ' current' : ''}`}>
+                  <header>
+                    <div className="step-number">{index}</div>
+                    <div>
+                      <h3>{entry.label}</h3>
+                      {entry.pivot && (
+                        <p><strong>{entry.pivot.enteringName}</strong> entered, <strong>{entry.pivot.leavingName}</strong> left · pivot {entry.pivot.pivotValue}</p>
+                      )}
+                    </div>
+                    {index === currentIndex
+                      ? <span className="status-badge green">Current</span>
+                      : <button className="text-button restore-step" type="button" onClick={() => onRestore(index)}>Open step</button>}
+                  </header>
+                  <TableauGrid
+                    tableau={entry.tableau}
+                    display={display}
+                    tableFontSize={tableFontSize}
+                    compact
+                    showHeader={stageIndex === 0}
+                    pivotMark={history[index + 1]?.pivot}
+                  />
+                </article>
+              ))}
+            </div>
+          </section>
         ))}
       </div>
-      {includeResult && <SolutionResult tableau={history[currentIndex].tableau} display={display} />}
+      {includeResult && <SolutionResult tableau={resultTableau ?? history[currentIndex].tableau} display={display} />}
     </section>
   );
 }

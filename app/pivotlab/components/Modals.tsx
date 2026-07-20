@@ -4,7 +4,12 @@ import { defaultSettings, shortcutFromEvent, shortcutLabels } from '../app/setti
 import { createTableauHistoryGraphic, tableauGraphicToPng } from '../export/tableauGraphic';
 import type { NumberDisplay } from '../math/rational';
 import type { Tableau } from '../model/tableau';
-import { exportCsv, exportLatex, exportMarkdown, serializeProject } from '../model/project';
+import {
+  exportCsvProject,
+  exportLatexProject,
+  exportMarkdownProject,
+  serializeProject,
+} from '../model/project';
 import type { HistoryEntry } from '../model/tableau';
 import { CheckIcon, CopyIcon, GridIcon, KeyboardIcon, SaveIcon, SparkIcon, XIcon } from './Icons';
 import { VariableName } from './VariableName';
@@ -238,9 +243,11 @@ interface ExportModalProps {
   display: NumberDisplay;
   includeResult: boolean;
   onIncludeResultChange: (include: boolean) => void;
+  includeSolution: boolean;
+  onIncludeSolutionChange: (include: boolean) => void;
   onClose: () => void;
   onNotice: (message: string) => void;
-  onPrintHistory: (includeResult: boolean) => void;
+  onPrintHistory: (includeResult: boolean, includeSolution: boolean) => void;
 }
 
 export function ExportModal({
@@ -250,17 +257,20 @@ export function ExportModal({
   display,
   includeResult,
   onIncludeResultChange,
+  includeSolution,
+  onIncludeSolutionChange,
   onClose,
   onNotice,
   onPrintHistory,
 }: ExportModalProps) {
   const [format, setFormat] = useState<ExportFormat>('latex');
   const [imageExporting, setImageExporting] = useState<'png' | 'transparent-png' | 'svg' | null>(null);
+  const exportOptions = { completeSolution: includeSolution, includeResult };
   const content = format === 'latex'
-    ? exportLatex(tableau)
+    ? exportLatexProject(history, currentIndex, display, exportOptions)
     : format === 'markdown'
-      ? exportMarkdown(tableau, display)
-      : exportCsv(tableau, display);
+      ? exportMarkdownProject(history, currentIndex, display, exportOptions)
+      : exportCsvProject(history, currentIndex, display, exportOptions);
   const extension = format === 'latex' ? 'tex' : format === 'markdown' ? 'md' : 'csv';
   const copy = async () => {
     try {
@@ -274,16 +284,22 @@ export function ExportModal({
     setImageExporting(kind);
     try {
       const transparent = kind === 'transparent-png';
-      const graphic = createTableauHistoryGraphic(history, currentIndex, display, { transparent, includeResult });
+      const graphic = createTableauHistoryGraphic(history, currentIndex, display, {
+        transparent,
+        includeResult,
+        completeSolution: includeSolution,
+        resultTableau: tableau,
+      });
+      const scopeName = includeSolution ? 'complete-solution' : 'initial-problem';
       if (kind === 'svg') {
-        downloadBlob(`${safeName(tableau.title)}-solution-history.svg`, new Blob(
+        downloadBlob(`${safeName(tableau.title)}-${scopeName}.svg`, new Blob(
           [graphic.svg],
           { type: 'image/svg+xml;charset=utf-8' },
         ));
       } else {
         const png = await tableauGraphicToPng(graphic);
         downloadBlob(
-          `${safeName(tableau.title)}-solution-history${transparent ? '-no-background' : ''}.png`,
+          `${safeName(tableau.title)}-${scopeName}${transparent ? '-no-background' : ''}.png`,
           png,
         );
       }
@@ -295,7 +311,7 @@ export function ExportModal({
     }
   };
   return (
-    <Modal title="Export solution" onClose={onClose} wide>
+    <Modal title="Export" onClose={onClose} wide>
       <div className="modal-body export-layout">
         <div className="export-options">
           <div className="format-tabs" role="tablist">
@@ -311,21 +327,26 @@ export function ExportModal({
         </div>
         <div className="export-actions-panel">
           <label className="export-result-toggle">
+            <input type="checkbox" checked={includeSolution} onChange={(event) => onIncludeSolutionChange(event.target.checked)} />
+            <span className="custom-checkbox"><CheckIcon /></span>
+            <span><strong>Export complete solution</strong><small>Include every tableau through the current step. Turn this off to export only the initial problem.</small></span>
+          </label>
+          <label className="export-result-toggle">
             <input type="checkbox" checked={includeResult} onChange={(event) => onIncludeResultChange(event.target.checked)} />
             <span className="custom-checkbox"><CheckIcon /></span>
-            <span><strong>Include final result</strong><small>Append f<sub>min</sub> and the decision-variable point to PDF, PNG, and SVG.</small></span>
+            <span><strong>Include final result</strong><small>Append f<sub>min</sub> and the decision-variable point independently of the selected export scope.</small></span>
           </label>
-          <div className="export-action-card"><strong>Complete solution PDF</strong><span>Print the complete Simplex Method Tableau with the current number display and marked pivots, or save it as PDF from your browser’s print dialog.</span><button className="secondary-button" type="button" onClick={() => onPrintHistory(includeResult)}>Print / PDF</button></div>
+          <div className="export-action-card"><strong>{includeSolution ? 'Complete solution PDF' : 'Initial problem PDF'}</strong><span>Print {includeSolution ? 'every tableau through the current step' : 'the initial problem'} with the current number display, or save it as PDF from your browser’s print dialog.</span><button className="secondary-button" type="button" onClick={() => onPrintHistory(includeResult, includeSolution)}>Print / PDF</button></div>
           <div className="export-action-card">
-            <strong>Complete solution image</strong>
-            <span>Export the complete Simplex Method Tableau with the current number display and marked pivots as PNG or SVG.</span>
+            <strong>{includeSolution ? 'Complete solution image' : 'Initial problem image'}</strong>
+            <span>Export {includeSolution ? 'every tableau through the current step' : 'the initial problem'} with the current number display as PNG or SVG.</span>
             <div className="image-export-buttons">
               <button className="secondary-button" type="button" disabled={imageExporting !== null} onClick={() => void exportImage('png')}>{imageExporting === 'png' ? 'Creating…' : 'PNG'}</button>
               <button className="secondary-button" type="button" disabled={imageExporting !== null} onClick={() => void exportImage('transparent-png')}>{imageExporting === 'transparent-png' ? 'Creating…' : 'PNG · no background'}</button>
               <button className="secondary-button" type="button" disabled={imageExporting !== null} onClick={() => void exportImage('svg')}>{imageExporting === 'svg' ? 'Creating…' : 'SVG'}</button>
             </div>
           </div>
-          <div className="export-action-card"><strong>Editable Simplex Assistant project</strong><span>Preserves exact fractions, Phase I state, and every tableau in the history.</span><button className="secondary-button" type="button" onClick={() => downloadText(`${safeName(tableau.title)}.simplex-assistant.json`, serializeProject(history, currentIndex))}>Save project</button></div>
+          <div className="export-action-card"><strong>Editable Simplex Assistant project</strong><span>{includeSolution ? 'Preserves the complete solution, exact values, and Phase I state.' : 'Saves only the editable initial problem with exact values.'}</span><button className="secondary-button" type="button" onClick={() => downloadText(`${safeName(tableau.title)}.simplex-assistant.json`, includeSolution ? serializeProject(history, currentIndex) : serializeProject(history.slice(0, 1), 0))}>Save project</button></div>
         </div>
       </div>
     </Modal>

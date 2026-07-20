@@ -1,5 +1,7 @@
 import type { NumberDisplay } from '../math/rational';
 import { formatRational, Rational } from '../math/rational';
+import { getSolutionResult } from './result';
+import { groupTableauStages } from './stages';
 import type { HistoryEntry, PivotRecord, StoredObjective, Tableau, TableauRow, TableauVariable } from './tableau';
 import { assertTableauShape, makeId } from './tableau';
 
@@ -183,6 +185,155 @@ export function exportLatex(tableau: Tableau): string {
     ...rows.map((row, index) => `  ${row.join(' & ')} \\\\${index === rows.length - 2 ? ' \\hline' : ''}`),
     '\\end{array}',
   ].join('\n');
+}
+
+export interface ProjectExportOptions {
+  completeSolution: boolean;
+  includeResult: boolean;
+}
+
+export function exportMarkdownProject(
+  history: HistoryEntry[],
+  currentIndex: number,
+  display: NumberDisplay,
+  options: ProjectExportOptions,
+): string {
+  const stages = exportStages(history, currentIndex, options.completeSolution);
+  const lines = [`# ${history[0]?.tableau.title ?? 'Simplex tableau'}`];
+  stages.forEach((stage) => {
+    if (stage.label) lines.push('', `## ${stage.label}`);
+    stage.entries.forEach(({ entry }, index) => {
+      lines.push('', `### ${options.completeSolution ? entry.label : 'Initial problem'}`, '', markdownTable(entry.tableau, display));
+      if (index < stage.entries.length - 1) lines.push('');
+    });
+  });
+  if (options.includeResult) {
+    const result = getSolutionResult(history[Math.min(currentIndex, history.length - 1)].tableau);
+    lines.push('', '## Final result', '', plainResult(result, display));
+  }
+  return lines.join('\n');
+}
+
+export function exportCsvProject(
+  history: HistoryEntry[],
+  currentIndex: number,
+  display: NumberDisplay,
+  options: ProjectExportOptions,
+): string {
+  const rows: string[][] = [];
+  exportStages(history, currentIndex, options.completeSolution).forEach((stage, stageIndex) => {
+    if (stageIndex > 0) rows.push([]);
+    if (stage.label) rows.push([stage.label]);
+    stage.entries.forEach(({ entry }, entryIndex) => {
+      if (entryIndex > 0 || stage.label) rows.push([]);
+      rows.push([options.completeSolution ? entry.label : 'Initial problem']);
+      rows.push(...csvTable(entry.tableau, display));
+    });
+  });
+  if (options.includeResult) {
+    const result = getSolutionResult(history[Math.min(currentIndex, history.length - 1)].tableau);
+    rows.push([], ['Final result', plainResult(result, display)]);
+  }
+  return rows.map((row) => row.map(csvCell).join(',')).join('\r\n');
+}
+
+export function exportLatexProject(
+  history: HistoryEntry[],
+  currentIndex: number,
+  display: NumberDisplay,
+  options: ProjectExportOptions,
+): string {
+  const blocks: string[] = [];
+  exportStages(history, currentIndex, options.completeSolution).forEach((stage) => {
+    if (stage.label) blocks.push(`\\textbf{${latexEscaped(stage.label)}}`);
+    stage.entries.forEach(({ entry }) => {
+      blocks.push(`\\text{${latexEscaped(options.completeSolution ? entry.label : 'Initial problem')}}`);
+      blocks.push(latexTable(entry.tableau, display));
+    });
+  });
+  if (options.includeResult) {
+    const result = getSolutionResult(history[Math.min(currentIndex, history.length - 1)].tableau);
+    const point = result.values.map(({ value }) => latexDisplayRational(value, display)).join(', ');
+    blocks.push(`\\text{Final result: } ${latexEscaped(result.objectiveName)}_{\\min} = ${latexDisplayRational(result.objectiveValue, display)} \\text{ at } (${point})`);
+  }
+  return ['\\[', '\\begin{gathered}', blocks.join(' \\\\[0.8em]\n'), '\\end{gathered}', '\\]'].join('\n');
+}
+
+function exportStages(history: HistoryEntry[], currentIndex: number, completeSolution: boolean) {
+  // Scope changes which tableaux are exported, while final-result inclusion is
+  // evaluated independently from the actual current tableau.
+  return completeSolution
+    ? groupTableauStages(history, currentIndex)
+    : groupTableauStages(history.slice(0, 1), 0);
+}
+
+function markdownTable(tableau: Tableau, display: NumberDisplay): string {
+  const headers = ['Basis', ...tableau.variables.map((variable) => variable.name), 'RHS'];
+  const rows = tableau.rows.map((row) => [
+    tableau.variables.find((variable) => variable.id === row.basisId)?.name ?? '—',
+    ...row.values.map((value) => formatRational(value, display)),
+  ]);
+  rows.push([tableau.objectiveName, ...tableau.objective.map((value) => formatRational(value, display))]);
+  return [
+    `| ${headers.map(escapeMarkdown).join(' | ')} |`,
+    `| ${headers.map(() => '---').join(' | ')} |`,
+    ...rows.map((row) => `| ${row.map(escapeMarkdown).join(' | ')} |`),
+  ].join('\n');
+}
+
+function csvTable(tableau: Tableau, display: NumberDisplay): string[][] {
+  return [
+    ['Basis', ...tableau.variables.map((variable) => variable.name), 'RHS'],
+    ...tableau.rows.map((row) => [
+      tableau.variables.find((variable) => variable.id === row.basisId)?.name ?? '',
+      ...row.values.map((value) => formatRational(value, display)),
+    ]),
+    [tableau.objectiveName, ...tableau.objective.map((value) => formatRational(value, display))],
+  ];
+}
+
+function latexTable(tableau: Tableau, display: NumberDisplay): string {
+  const columns = `c|${'c'.repeat(tableau.variables.length)}|c`;
+  const header = ['\\text{Basis}', ...tableau.variables.map((variable) => latexVariable(variable.name)), '\\text{RHS}'];
+  const rows = tableau.rows.map((row) => [
+    latexVariable(tableau.variables.find((variable) => variable.id === row.basisId)?.name ?? '—'),
+    ...row.values.map((value) => latexDisplayRational(value, display)),
+  ]);
+  rows.push([latexVariable(tableau.objectiveName), ...tableau.objective.map((value) => latexDisplayRational(value, display))]);
+  return [
+    `\\begin{array}{${columns}}`,
+    `  ${header.join(' & ')} \\\\`,
+    '  \\hline',
+    ...rows.map((row, index) => `  ${row.join(' & ')} \\\\${index === rows.length - 2 ? ' \\hline' : ''}`),
+    '\\end{array}',
+  ].join('\n');
+}
+
+function latexDisplayRational(value: Rational, display: NumberDisplay): string {
+  if (display.mode === 'decimal') return formatRational(value, display);
+  return latexRational(value);
+}
+
+function latexVariable(value: string): string {
+  const match = /^(.*?)(\d+)$/.exec(value);
+  return match ? `${latexEscaped(match[1])}_{${latexEscaped(match[2])}}` : `\\text{${latexEscaped(value)}}`;
+}
+
+function latexEscaped(value: string): string {
+  return value
+    .replaceAll('\\', '\\backslash ')
+    .replaceAll('&', '\\&')
+    .replaceAll('%', '\\%')
+    .replaceAll('$', '\\$')
+    .replaceAll('#', '\\#')
+    .replaceAll('_', '\\_')
+    .replaceAll('{', '\\{')
+    .replaceAll('}', '\\}');
+}
+
+function plainResult(result: ReturnType<typeof getSolutionResult>, display: NumberDisplay): string {
+  const point = result.values.map(({ value }) => formatRational(value, display)).join(', ');
+  return `${result.objectiveName}_min = ${formatRational(result.objectiveValue, display)} at (${point})`;
 }
 
 function latexRational(value: Rational): string {

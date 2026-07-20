@@ -111,6 +111,8 @@ export default function App() {
   const [includePrintResult, setIncludePrintResult] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
   const [includeExportResult, setIncludeExportResult] = useState(true);
+  const [includeExportSolution, setIncludeExportSolution] = useState(true);
+  const [printCompleteSolution, setPrintCompleteSolution] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -570,10 +572,13 @@ export default function App() {
         display={display}
         includeResult={includeExportResult}
         onIncludeResultChange={setIncludeExportResult}
+        includeSolution={includeExportSolution}
+        onIncludeSolutionChange={setIncludeExportSolution}
         onClose={() => setModal(null)}
         onNotice={showNotice}
-        onPrintHistory={(includeResult) => {
+        onPrintHistory={(includeResult, includeSolution) => {
           setIncludePrintResult(includeResult);
+          setPrintCompleteSolution(includeSolution);
           setIsPrinting(true);
           window.setTimeout(() => {
             window.addEventListener('afterprint', () => {
@@ -587,11 +592,12 @@ export default function App() {
       {isPrinting && (
         <div className="print-solution-record" aria-hidden="true">
           <SolutionHistoryView
-            history={history}
-            currentIndex={currentIndex}
+            history={printCompleteSolution ? history : history.slice(0, 1)}
+            currentIndex={printCompleteSolution ? currentIndex : 0}
             display={display}
             tableFontSize={settings.tableFontSize}
             includeResult={includePrintResult}
+            resultTableau={current}
             onRestore={() => undefined}
           />
         </div>

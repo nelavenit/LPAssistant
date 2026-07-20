@@ -404,6 +404,9 @@ kbd { display: inline-flex; min-height: 22px; align-items: center; padding: 2px 
 .history-icon { width: 52px; height: 52px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 15px; background: var(--brand-soft); color: var(--brand); }
 .history-list { display: grid; gap: 18px; position: relative; }
 .history-list::before { content: none; }
+.solution-stage { display: grid; gap: 8px; }
+.solution-stage-label { margin: 0; padding: 8px 12px; color: var(--ink-soft); background: var(--surface-muted); border: 1px solid var(--line); border-radius: var(--radius-sm); font-size: .76rem; letter-spacing: .055em; text-transform: uppercase; }
+.solution-stage-tableaux { display: grid; gap: 0; }
 .history-card { position: relative; z-index: 1; margin-left: 0; border-radius: var(--radius-lg); border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow-sm); overflow: hidden; }
 .history-card.current { border-color: color-mix(in srgb, var(--brand) 45%, var(--line)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 8%, transparent), var(--shadow-sm); }
 .history-card > header { min-height: 65px; display: flex; align-items: center; gap: 12px; padding: 12px 17px; background: var(--surface-soft); border-bottom: 1px solid var(--line); }
