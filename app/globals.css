@@ -381,6 +381,19 @@ kbd { display: inline-flex; min-height: 22px; align-items: center; padding: 2px 
 
 .history-main { flex: 1; width: 100%; max-width: 1500px; margin: 0 auto; padding: 28px 24px 40px; }
 .print-solution-record { display: none; }
+.problem-history-view { display: grid; gap: 22px; }
+.problem-history-list { display: grid; gap: 10px; }
+.problem-history-card { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 14px; padding: 15px 17px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-sm); }
+.problem-history-symbol { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 11px; color: var(--brand); background: var(--brand-soft); }
+.problem-history-symbol svg { width: 21px; height: 21px; }
+.problem-history-details { min-width: 0; }
+.problem-history-details h3 { margin: 0; overflow: hidden; color: var(--ink); font-size: .92rem; text-overflow: ellipsis; white-space: nowrap; }
+.problem-history-details p { margin: 4px 0; color: var(--muted); font-size: .76rem; }
+.problem-history-details time { color: var(--faint); font-size: .7rem; }
+.problem-history-empty { min-height: 260px; display: grid; place-items: center; align-content: center; gap: 8px; padding: 28px; border: 1px dashed var(--line-strong); border-radius: var(--radius-lg); color: var(--muted); text-align: center; background: var(--surface-soft); }
+.problem-history-empty > svg { width: 30px; height: 30px; color: var(--faint); }
+.problem-history-empty h3 { margin: 4px 0 0; color: var(--ink-soft); font-size: .95rem; }
+.problem-history-empty p { margin: 0; max-width: 360px; font-size: .8rem; line-height: 1.5; }
 .history-view { display: grid; gap: 22px; }
 .history-intro { display: flex; align-items: center; gap: 16px; }
 .history-icon { width: 52px; height: 52px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 15px; background: var(--brand-soft); color: var(--brand); }
@@ -565,6 +578,9 @@ kbd { display: inline-flex; min-height: 22px; align-items: center; padding: 2px 
   .step-number { width: 32px; height: 32px; font-size: .74rem; }
   .history-card > header { padding-inline: 12px; }
   .history-card header p { display: none; }
+  .problem-history-card { grid-template-columns: auto minmax(0, 1fr) auto; gap: 9px; padding: 12px; }
+  .problem-history-card .secondary-button { grid-column: 2; justify-self: start; min-height: 34px; padding-block: 6px; }
+  .problem-history-card > .icon-button { grid-column: 3; grid-row: 1 / span 2; }
   .solution-result { margin-left: 0; }
   .modal-backdrop { padding: 8px; align-items: end; }
   .modal-card { max-height: calc(100vh - 16px); border-radius: 18px 18px 10px 10px; }

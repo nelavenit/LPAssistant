@@ -1,6 +1,7 @@
 import type { NumberDisplay } from '../math/rational';
+import type { ProblemHistoryRecord } from '../model/problemHistory';
 import type { HistoryEntry } from '../model/tableau';
-import { HistoryIcon } from './Icons';
+import { FolderIcon, HistoryIcon, TrashIcon } from './Icons';
 import { SolutionResult } from './SolutionResult';
 import { TableauGrid } from './TableauGrid';
 
@@ -53,4 +54,55 @@ export function SolutionHistoryView({ history, currentIndex, display, tableFontS
       {includeResult && <SolutionResult tableau={history[currentIndex].tableau} display={display} />}
     </section>
   );
+}
+
+interface ProblemHistoryViewProps {
+  problems: ProblemHistoryRecord[];
+  onOpen: (record: ProblemHistoryRecord) => void;
+  onDelete: (id: string) => void;
+}
+
+export function ProblemHistoryView({ problems, onOpen, onDelete }: ProblemHistoryViewProps) {
+  return (
+    <section className="problem-history-view">
+      <div className="history-intro">
+        <div className="history-icon"><HistoryIcon /></div>
+        <div>
+          <span className="eyebrow">Saved locally</span>
+          <h2>Previous problems</h2>
+          <p>Starting or opening another problem archives the current one here so you can resume it later.</p>
+        </div>
+      </div>
+      {problems.length === 0 ? (
+        <div className="problem-history-empty">
+          <HistoryIcon />
+          <h3>No previous problems yet</h3>
+          <p>Your current problem will appear here when you create or open another one.</p>
+        </div>
+      ) : (
+        <div className="problem-history-list">
+          {problems.map((problem) => (
+            <article className="problem-history-card" key={problem.id}>
+              <div className="problem-history-symbol"><FolderIcon /></div>
+              <div className="problem-history-details">
+                <h3>{problem.title}</h3>
+                <p>{problem.constraintCount} {problem.constraintCount === 1 ? 'constraint' : 'constraints'} · {problem.variableCount} {problem.variableCount === 1 ? 'variable' : 'variables'} · {problem.stepCount} {problem.stepCount === 1 ? 'tableau' : 'tableaux'}</p>
+                <time dateTime={problem.savedAt}>{formatSavedAt(problem.savedAt)}</time>
+              </div>
+              <button className="secondary-button" type="button" onClick={() => onOpen(problem)}>Resume</button>
+              <button className="icon-button danger-quiet" type="button" aria-label={`Delete ${problem.title} from history`} title="Delete from history" onClick={() => onDelete(problem.id)}><TrashIcon /></button>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function formatSavedAt(value: string): string {
+  const date = new Date(value);
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
 }

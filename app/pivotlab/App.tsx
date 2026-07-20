@@ -22,7 +22,15 @@ import {
   type Tableau,
 } from './model/tableau';
 import { deserializeProject, serializeProject } from './model/project';
-import { SolutionHistoryView } from './components/HistoryView';
+import {
+  createProblemHistoryRecord,
+  loadProblemHistory,
+  MAX_SAVED_PROBLEMS,
+  openProblemHistoryRecord,
+  saveProblemHistory,
+  type ProblemHistoryRecord,
+} from './model/problemHistory';
+import { ProblemHistoryView, SolutionHistoryView } from './components/HistoryView';
 import {
   ExportIcon,
   FolderIcon,
@@ -91,6 +99,7 @@ export default function App() {
   const [currentIndex, setCurrentIndex] = useState(session.currentIndex);
   const [editHistory, setEditHistory] = useState<Tableau[]>([session.history[0].tableau]);
   const [editIndex, setEditIndex] = useState(0);
+  const [problemHistory, setProblemHistory] = useState<ProblemHistoryRecord[]>(loadProblemHistory);
   const [mode, setMode] = useState<AppMode>('pivot');
   const [algorithm, setAlgorithm] = useState<Algorithm>('primal');
   const [view, setView] = useState<View>('workspace');
@@ -117,6 +126,10 @@ export default function App() {
   useEffect(() => {
     try { localStorage.setItem('pivotlab-autosave', serializeProject(history, currentIndex)); } catch { /* Quota errors are nonfatal. */ }
   }, [history, currentIndex]);
+
+  useEffect(() => {
+    try { saveProblemHistory(problemHistory); } catch { /* Quota errors are nonfatal. */ }
+  }, [problemHistory]);
 
   useEffect(() => {
     localStorage.setItem('pivotlab-display', JSON.stringify(display));
@@ -164,7 +177,16 @@ export default function App() {
     setSelection(null);
   };
 
+  const archiveCurrentProblem = (excludingId?: string) => {
+    const archived = createProblemHistoryRecord(history, currentIndex);
+    setProblemHistory((previous) => [
+      archived,
+      ...previous.filter((record) => record.id !== excludingId),
+    ].slice(0, MAX_SAVED_PROBLEMS));
+  };
+
   const reset = (tableau: Tableau) => {
+    archiveCurrentProblem();
     setHistory([{ id: makeId('history'), label: 'Initial tableau', tableau }]);
     setCurrentIndex(0);
     setEditHistory([tableau]);
@@ -309,6 +331,7 @@ export default function App() {
     }
     try {
       const loaded = deserializeProject(await file.text());
+      archiveCurrentProblem();
       setHistory(loaded.history);
       setCurrentIndex(loaded.currentIndex);
       setEditHistory([loaded.history[0].tableau]);
@@ -321,6 +344,19 @@ export default function App() {
       showNotice(caught instanceof Error ? caught.message : 'The project could not be opened.');
     }
   };
+
+  const resumeProblem = (record: ProblemHistoryRecord) => safely(() => {
+    const loaded = openProblemHistoryRecord(record);
+    archiveCurrentProblem(record.id);
+    setHistory(loaded.history);
+    setCurrentIndex(loaded.currentIndex);
+    setEditHistory([loaded.history[0].tableau]);
+    setEditIndex(0);
+    setSelection(null);
+    setView('workspace');
+    setMode(loaded.currentIndex > 0 ? 'pivot' : 'edit');
+    showNotice(`${record.title} restored from local history.`);
+  });
 
   const numberMode = display.mode;
 
@@ -377,7 +413,7 @@ export default function App() {
         <div className="command-divider" />
         <div className="segmented-control view-control" aria-label="View">
           <button type="button" className={view === 'workspace' ? 'active' : ''} onClick={() => setView('workspace')}><GridIcon /> Tableau</button>
-          <button type="button" className={view === 'history' ? 'active' : ''} onClick={() => setView('history')}><HistoryIcon /> History <span className="count-pill">{history.length}</span></button>
+          <button type="button" className={view === 'history' ? 'active' : ''} onClick={() => setView('history')}><HistoryIcon /> History <span className="count-pill">{problemHistory.length}</span></button>
         </div>
         <div className="command-divider" />
         <div className="segmented-control compact-control" aria-label="Algorithm">
@@ -491,17 +527,10 @@ export default function App() {
         </main>
       ) : (
         <main className="history-main">
-          <SolutionHistoryView
-            history={history}
-            currentIndex={currentIndex}
-            display={display}
-            tableFontSize={settings.tableFontSize}
-            includeResult={includePrintResult}
-            onRestore={(index) => {
-              setCurrentIndex(index);
-              setSelection(null);
-              if (index > 0) setMode('pivot');
-            }}
+          <ProblemHistoryView
+            problems={problemHistory}
+            onOpen={resumeProblem}
+            onDelete={(id) => setProblemHistory((previous) => previous.filter((record) => record.id !== id))}
           />
         </main>
       )}
