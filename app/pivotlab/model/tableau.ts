@@ -92,26 +92,6 @@ export function createBlankTableau(rowCount = 3, variableCount = 5, title = 'Unt
   };
 }
 
-export function createTextbookExample(): Tableau {
-  const tableau = createBlankTableau(3, 7, 'Example 7.4.1');
-  tableau.variables[4].kind = 'slack';
-  tableau.variables[5].kind = 'slack';
-  tableau.variables[6].kind = 'slack';
-  tableau.rows[0].values = rationals(['2', '0', '-1', '3', '1', '0', '0', '20']);
-  tableau.rows[1].values = rationals(['0', '1', '-2', '-1', '0', '1', '0', '30']);
-  tableau.rows[2].values = rationals(['-3', '6', '3', '4', '0', '0', '1', '24']);
-  tableau.rows[0].basisId = tableau.variables[4].id;
-  tableau.rows[1].basisId = tableau.variables[5].id;
-  tableau.rows[2].basisId = tableau.variables[6].id;
-  tableau.objectiveName = 'f';
-  tableau.objective = rationals(['5', '-18', '-6', '1', '0', '0', '0', '0']);
-  return tableau;
-}
-
-function rationals(values: string[]): Rational[] {
-  return values.map((value) => Rational.parse(value));
-}
-
 export function cloneTableau(tableau: Tableau): Tableau {
   return {
     ...tableau,
