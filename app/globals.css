@@ -233,9 +233,10 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 3px s
 .control-tooltip::before { content: ""; position: absolute; left: 22px; top: -5px; width: 8px; height: 8px; border-left: 1px solid color-mix(in srgb, var(--brand) 35%, var(--line)); border-top: 1px solid color-mix(in srgb, var(--brand) 35%, var(--line)); background: var(--surface-raised); transform: rotate(45deg); }
 .disabled-edit-tip.visible:hover .control-tooltip, .disabled-edit-tip.visible:focus-within .control-tooltip { opacity: 1; visibility: visible; transform: translateY(0); }
 .compact-control button { min-width: 60px; height: 32px; padding: 0 10px; display: grid; place-items: center; }
-.display-fraction-sample { display: inline-flex; align-items: baseline; white-space: nowrap; line-height: 1; }
-/* Keep the native slash glyph and font, but optically center its overhang around
-   the digits. Separate inline glyphs remain stable at extreme browser zoom. */
+.display-fraction-sample { display: inline; white-space: nowrap; line-height: 1; }
+/* Keep the digits in the parent's ordinary inline text flow: Firefox can stop
+   painting the first child of the former inline-flex at extreme browser zoom.
+   Only the native slash needs its own span for the optical adjustment. */
 .display-fraction-slash { position: relative; top: -.045em; margin-inline: .015em; }
 .count-pill { min-width: 19px; height: 19px; border-radius: 10px; display: grid; place-items: center; padding: 0 5px; background: var(--surface-muted); font-size: .74rem; }
 .command-divider { height: 26px; width: 1px; background: var(--line); flex: 0 0 auto; }

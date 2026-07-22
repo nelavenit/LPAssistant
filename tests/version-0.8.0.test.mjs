@@ -162,7 +162,7 @@ test('light and dark theme tokens, inspector art, controls, and print frames ret
     readFile(new URL('../README.md', import.meta.url), 'utf8'),
   ]);
 
-  assert.match(app, /<span className="display-fraction-sample" aria-label="Fractions">[\s\S]*display-fraction-slash/);
+  assert.match(app, /<span className="display-fraction-sample" aria-label="Fractions">1<span className="display-fraction-slash"[^>]*>\/<\/span>2<\/span>/);
   assert.match(css, /\.display-fraction-slash \{[^}]*top: -\.045em;/s);
   assert.match(variableName, /className="variable-name"/);
   assert.match(inspector, /var\(--pivot-icon-field\)/);

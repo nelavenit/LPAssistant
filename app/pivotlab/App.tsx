@@ -436,9 +436,7 @@ export default function App() {
           <span>Display</span>
           <div className="segmented-control compact-control">
             <button type="button" className={numberMode === 'fraction' ? 'active' : ''} onClick={() => setDisplay({ mode: 'fraction' })}>
-              <span className="display-fraction-sample" aria-label="Fractions">
-                <span>1</span><span className="display-fraction-slash" aria-hidden="true">/</span><span>2</span>
-              </span>
+              <span className="display-fraction-sample" aria-label="Fractions">1<span className="display-fraction-slash" aria-hidden="true">/</span>2</span>
             </button>
             <button type="button" className={numberMode === 'decimal' ? 'active' : ''} onClick={() => setDisplay({ mode: 'decimal', precision: display.mode === 'decimal' ? display.precision : 3 })}>0.50</button>
           </div>
