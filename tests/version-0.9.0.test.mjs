@@ -86,3 +86,9 @@ test('original variables are green and slack variables are gray', async () => {
   assert.match(css, /\.variable-header::before \{[^}]*background: var\(--variable-slack\);/s);
   assert.doesNotMatch(css, /\.variable-header\.variable-slack::before \{ background: #4a9a7c;/);
 });
+
+test('the variable type selector calls user variables original', async () => {
+  const grid = await source('../app/pivotlab/components/TableauGrid.tsx');
+  assert.match(grid, /<option value="regular">Original<\/option>/);
+  assert.doesNotMatch(grid, /<option value="regular">Regular<\/option>/);
+});

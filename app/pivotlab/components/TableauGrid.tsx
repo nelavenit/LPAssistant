@@ -109,7 +109,7 @@ export function TableauGrid({
                             next.variables[columnIndex].kind = event.target.value as VariableKind;
                           })}
                         >
-                          <option value="regular">Regular</option>
+                          <option value="regular">Original</option>
                           <option value="slack">Slack</option>
                           <option value="artificial">Artificial</option>
                         </select>
