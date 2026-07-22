@@ -77,3 +77,12 @@ test('dark mode restores green as a restrained interactive accent', async () => 
   assert.match(dark, /--surface: #181818;/);
   assert.match(css, /\.brand-mark \{[^}]*background: var\(--brand\);/s);
 });
+
+test('original variables are green and slack variables are gray', async () => {
+  const css = await source('../app/globals.css');
+  assert.match(css, /--variable-original: #4a9a7c;/);
+  assert.match(css, /--variable-slack: #8d9892;/);
+  assert.match(css, /\.variable-header\.variable-regular::before \{ background: var\(--variable-original\); \}/);
+  assert.match(css, /\.variable-header::before \{[^}]*background: var\(--variable-slack\);/s);
+  assert.doesNotMatch(css, /\.variable-header\.variable-slack::before \{ background: #4a9a7c;/);
+});

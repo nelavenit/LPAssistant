@@ -21,6 +21,8 @@
   --accent-soft: #fff0d9;
   --danger: #b64040;
   --danger-soft: #fbe9e9;
+  --variable-original: #4a9a7c;
+  --variable-slack: #8d9892;
   --pivot-icon-field: #e7f0eb;
   --pivot-icon-field-edge: #edf4f0;
   --pivot-icon-line: #b7c9c0;
@@ -58,6 +60,8 @@
   --accent-soft: #3b2d1c;
   --danger: #ee8585;
   --danger-soft: #492626;
+  --variable-original: #3fb950;
+  --variable-slack: #8b949e;
   --pivot-icon-field: #343434;
   --pivot-icon-field-edge: #242424;
   --pivot-icon-line: #777777;
@@ -89,6 +93,8 @@
     --accent-soft: #3b2d1c;
     --danger: #ee8585;
     --danger-soft: #492626;
+    --variable-original: #3fb950;
+    --variable-slack: #8b949e;
     --pivot-icon-field: #343434;
     --pivot-icon-field-edge: #242424;
     --pivot-icon-line: #777777;
@@ -307,10 +313,9 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 3px s
 .tableau-grid thead .sticky-left, .tableau-grid thead .sticky-right { z-index: 8; }
 .basis-cell, .objective-name { font-size: inherit; background: var(--surface-soft) !important; }
 .empty-basis { color: var(--faint); }
-.variable-header::before { content: ""; position: absolute; left: 9px; top: 9px; width: 5px; height: 5px; border-radius: 50%; background: var(--line-strong); }
-.variable-header.variable-slack::before { background: #4a9a7c; }
+.variable-header::before { content: ""; position: absolute; left: 9px; top: 9px; width: 5px; height: 5px; border-radius: 50%; background: var(--variable-slack); }
+.variable-header.variable-regular::before { background: var(--variable-original); }
 .variable-header.variable-artificial::before { background: var(--accent); }
-:root[data-theme="dark"] .variable-header.variable-slack::before { background: #a4a4a4; }
 .tableau-grid sub { font-size: .65em; vertical-align: -.22em; }
 .variable-name { display: inline; white-space: nowrap; }
 .variable-name sub { font-size: .65em; line-height: 0; vertical-align: -.28em; }
@@ -522,7 +527,6 @@ kbd { display: inline-flex; min-height: 22px; align-items: center; padding: 2px 
   :root[data-theme="system"] .settings-toggle > input:checked + .custom-checkbox,
   :root[data-theme="system"] .export-result-toggle > input:checked + .custom-checkbox { color: #151515; }
   :root[data-theme="system"] .status-badge.green { color: var(--ink); background: #303030; }
-  :root[data-theme="system"] .variable-header.variable-slack::before { background: #a4a4a4; }
 }
 .export-result-toggle > span:last-child { display: grid; gap: 3px; }
 .export-result-toggle strong { font-size: .82rem; }
