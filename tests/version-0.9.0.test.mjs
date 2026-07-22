@@ -12,7 +12,7 @@ test('the display selector keeps both digits in one native text run at extreme F
   assert.match(app, /className="display-fraction-sample"[^>]*>1 2<\/span>/);
   assert.doesNotMatch(app, /display-fraction-slash|<span>1<\/span>|<span>2<\/span>/);
   assert.match(css, /\.display-fraction-sample \{[^}]*display: inline-block;[^}]*white-space: pre;/s);
-  assert.match(css, /\.display-fraction-sample::after \{[^}]*content: "\/";[^}]*translateY\(-\.085em\);/s);
+  assert.match(css, /\.display-fraction-sample::after \{[^}]*content: "\/";[^}]*translateY\(-\.04em\);/s);
   assert.doesNotMatch(css, /\.display-fraction-sample \{[^}]*inline-flex/s);
   assert.doesNotMatch(css, /\.display-fraction-slash/);
 });
@@ -50,7 +50,8 @@ test('the new-tableau dialog presents blank creation before examples', async () 
   const blank = modal.indexOf('Create a blank tableau');
   const example = modal.indexOf('className="example-library"');
   assert.ok(blank >= 0 && example > blank);
-  assert.match(modal, /or load an example/);
+  assert.match(modal, /className="new-tableau-option-heading"[^>]*>Create a blank tableau<\/h3>/);
+  assert.match(modal, /className="new-tableau-option-heading">Or load an example<\/h3>/);
 });
 
 test('all download and PDF paths share export-setting filenames', async () => {
@@ -102,10 +103,22 @@ test('the variable type selector calls user variables original', async () => {
 test('PDF and print separators are at least one typographic point', async () => {
   const css = await source('../app/globals.css');
   const printCss = css.slice(css.indexOf('@media print'));
-  assert.match(printCss, /\.solution-stage-tableaux \{[^}]*border: 1pt solid #777;/s);
+  assert.match(printCss, /\.solution-stage-tableaux \{[^}]*border: 1\.5pt solid #777;/s);
   assert.match(printCss, /border-right: 1pt solid #777 !important; border-bottom: 1pt solid #777 !important;/);
   assert.match(printCss, /\.tableau-grid \.sticky-left \{ border-right-width: 1\.5pt !important; \}/);
   assert.doesNotMatch(printCss, /border-(?:right|bottom|top): 1px solid #777/);
+});
+
+test('bitmap and vector exports use compact cells with an unclipped outer frame', async () => {
+  const graphic = await source('../app/pivotlab/export/tableauGraphic.ts');
+  assert.match(graphic, /const BASIS_WIDTH = 82;/);
+  assert.match(graphic, /const VALUE_WIDTH = 84;/);
+  assert.match(graphic, /const RHS_WIDTH = 74;/);
+  assert.match(graphic, /const HEADER_HEIGHT = 38;/);
+  assert.match(graphic, /const ROW_HEIGHT = 48;/);
+  assert.match(graphic, /x1="1"[\s\S]*stroke-width="2"/);
+  assert.match(graphic, /x1="\$\{width - 1\}"[\s\S]*stroke-width="2"/);
+  assert.doesNotMatch(graphic, /const verticals = \[0,/);
 });
 
 test('shared export options precede every export format', async () => {
@@ -136,19 +149,21 @@ test('navigation and history call entries pivoting steps, not tableaux', async (
   assert.doesNotMatch([app, settings, history, modal].join('\n'), /previous tableau|next tableau|every tableau through/i);
 });
 
-test('minus signs and fraction bars share one centred rule geometry', async () => {
+test('tableau minuses keep a constant fraction gap while ordinary equations remain in flow', async () => {
   const [numberValue, css, graphic] = await Promise.all([
     source('../app/pivotlab/components/NumberValue.tsx'),
     source('../app/globals.css'),
     source('../app/pivotlab/export/tableauGraphic.ts'),
   ]);
-  assert.match(numberValue, /number-sign\$\{negative \? ' negative' : ''\}/);
+  assert.match(numberValue, /alignMagnitude \? 'aligned-number-value' : 'inline-number-value'/);
+  assert.match(numberValue, /negative && <span className="number-sign negative"/);
   assert.match(numberValue, /className="number-magnitude fraction-stack"/);
-  assert.match(css, /\.number-value \{[^}]*--math-rule-width: 1\.25px;[^}]*grid-template-columns: \.58em auto \.58em;[^}]*column-gap: \.08em;/s);
-  assert.match(css, /\.number-sign \{[^}]*height: var\(--math-rule-width\);[^}]*align-self: center;/s);
+  assert.match(css, /\.number-value \{[^}]*--math-rule-width: 1\.25px;[^}]*display: inline-flex;/s);
+  assert.match(css, /\.aligned-number-value \.number-sign \{[^}]*position: absolute;[^}]*right: calc\(100% \+ \.1em\);[^}]*top: 50%;/s);
+  assert.match(css, /\.inline-number-value \{ gap: \.1em; \}/);
   assert.match(css, /\.number-sign\.negative \{ background: currentColor; \}/);
   assert.match(css, /\.fraction-stack::after \{[^}]*height: var\(--math-rule-width\);[^}]*background: currentColor;/s);
-  assert.doesNotMatch(css, /\.number-sign \{[^}]*position: absolute/s);
+  assert.match(graphic, /const signRight = fractionX - lineWidth \/ 2 - signGap;/);
   assert.match(graphic, /const fractionX = x;/);
   assert.match(graphic, /signedTextLabel\(formatRational\(value, display\), x, y, bold, 18\)/);
   assert.match(graphic, /const signWidth = size \* \.42;/);
@@ -173,7 +188,7 @@ test('split variable parts have explicit kinds, selector labels, and green signs
   assert.match(css, /\.variable-split-positive \.variable-kind-marker, \.variable-split-negative \.variable-kind-marker \{[^}]*background: transparent;/s);
 });
 
-test('variable markers explain themselves on delayed hover, focus, and touch', async () => {
+test('variable markers use an unclipped portal centred on every marker kind', async () => {
   const [grid, css] = await Promise.all([
     source('../app/pivotlab/components/TableauGrid.tsx'),
     source('../app/globals.css'),
@@ -186,11 +201,13 @@ test('variable markers explain themselves on delayed hover, focus, and touch', a
     'Negative part of unrestricted variable',
   ]) assert.match(grid, new RegExp(hint));
   assert.match(grid, /aria-describedby=\{editable \? undefined : `variable-kind-tip-/);
-  assert.match(grid, /\{!editable && \(\s*<span[\s\S]*role="tooltip"/);
+  assert.match(grid, /createPortal\(/);
+  assert.match(grid, /bounds\.left \+ bounds\.width \/ 2/);
+  assert.match(grid, /window\.setTimeout\(reveal, 350\)/);
   assert.match(grid, /event\.pointerType !== 'touch'/);
   assert.match(grid, /role="tooltip"/);
-  assert.match(css, /\.variable-header:hover > \.variable-kind-tooltip \{[^}]*transition-delay: \.35s;/s);
-  assert.match(css, /\.variable-header:focus > \.variable-kind-tooltip, \.variable-header:focus-within > \.variable-kind-tooltip, \.variable-kind-tooltip\.touch-visible/);
+  assert.match(css, /\.variable-kind-tooltip-portal \{[^}]*position: fixed;[^}]*transform: translateX\(-50%\);/s);
+  assert.match(css, /\.variable-kind-tooltip-portal::before \{ left: 50%;/);
 });
 
 test('pivot guidance leaves ratio calculation to the inspector', async () => {
@@ -241,9 +258,9 @@ test('the new-tableau dialog renders the curated example library', async () => {
   assert.match(css, /\.example-library \{[^}]*grid-template-columns: repeat\(2,/s);
 });
 
-test('README documents the substantive 0.9.2 capabilities without visual trivia', async () => {
+test('README documents the substantive 0.9.3 capabilities without visual trivia', async () => {
   const readme = await source('../README.md');
-  assert.match(readme, /Simplex Assistant 0\.9\.2/);
+  assert.match(readme, /Simplex Assistant 0\.9\.3/);
   assert.match(readme, /unrestricted-variable splitting/);
   assert.match(readme, /curated example library/);
   assert.doesNotMatch(readme, /colored variable|green dot|tooltip delay/i);

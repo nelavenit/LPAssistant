@@ -176,12 +176,12 @@ test('light and dark theme tokens, inspector art, controls, and print frames ret
   assert.match(modal, /Restore appearance defaults/);
   assert.match(modal, /Restore shortcut defaults/);
   assert.doesNotMatch(modal, /eyebrow="Start fresh"/);
-  assert.match(css, /\.solution-stage-tableaux \{ display: block; border: 1pt solid #777;/);
-  assert.match(css, /height: 7\.5mm; padding: 1\.2mm;/);
+  assert.match(css, /\.solution-stage-tableaux \{ display: block; border: 1\.5pt solid #777;/);
+  assert.match(css, /height: 5\.4mm; padding: \.65mm;/);
   assert.doesNotMatch(readme, /clearly named|tableau-only scrolling|persistent Pivot Inspector/i);
 });
 
-test('release metadata and offline cache identify version 0.9.2', async () => {
+test('release metadata and offline cache identify version 0.9.3', async () => {
   const [pkg, lock, readme, modal, worker] = await Promise.all([
     readFile(new URL('../package.json', import.meta.url), 'utf8'),
     readFile(new URL('../package-lock.json', import.meta.url), 'utf8'),
@@ -189,11 +189,11 @@ test('release metadata and offline cache identify version 0.9.2', async () => {
     readFile(new URL('../app/pivotlab/components/Modals.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../public/sw.js', import.meta.url), 'utf8'),
   ]);
-  assert.match(pkg, /"version": "0\.9\.2"/);
-  assert.match(lock, /"version": "0\.9\.2"/);
-  assert.match(readme, /Simplex Assistant 0\.9\.2/);
-  assert.match(modal, /Simplex Assistant 0\.9\.2/);
-  assert.match(worker, /simplex-assistant-shell-v15/);
+  assert.match(pkg, /"version": "0\.9\.3"/);
+  assert.match(lock, /"version": "0\.9\.3"/);
+  assert.match(readme, /Simplex Assistant 0\.9\.3/);
+  assert.match(modal, /Simplex Assistant 0\.9\.3/);
+  assert.match(worker, /simplex-assistant-shell-v16/);
 });
 
 function contrast(first, second) {

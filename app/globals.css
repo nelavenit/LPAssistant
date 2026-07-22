@@ -237,7 +237,7 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 3px s
 /* Firefox's extreme page zoom has repeatedly exposed disappearing glyphs when
    the two digits are split into children. They therefore remain one text run;
    only the decorative slash is lifted independently for optical centring. */
-.display-fraction-sample::after { content: "/"; position: absolute; inset: 0; display: grid; place-items: center; word-spacing: normal; transform: translateY(-.085em); }
+.display-fraction-sample::after { content: "/"; position: absolute; inset: 0; display: grid; place-items: center; word-spacing: normal; transform: translateY(-.04em); }
 .count-pill { min-width: 19px; height: 19px; border-radius: 10px; display: grid; place-items: center; padding: 0 5px; background: var(--surface-muted); font-size: .74rem; }
 .command-divider { height: 26px; width: 1px; background: var(--line); flex: 0 0 auto; }
 .command-spacer { flex: 1 1 auto; }
@@ -318,17 +318,11 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 3px s
 .variable-regular .variable-kind-marker { background: var(--variable-original); }
 .variable-artificial .variable-kind-marker { background: var(--accent); }
 .variable-split-positive .variable-kind-marker, .variable-split-negative .variable-kind-marker { left: 6px; top: 5px; width: 13px; height: 13px; border-radius: 0; background: transparent; }
-/* Meet the pointer directly under the marker so the hint reads as an
-   explanation of the dot/sign rather than of the whole variable header. */
-.variable-kind-tooltip { top: 21px; left: -3px; width: max-content; min-width: 0; max-width: 240px; text-align: left; transition-delay: 0s; }
-/* The rotated 8px pointer is positioned by its centre, not its left edge. Its
-   apex now lands exactly on the centre of the 7px original/slack marker. */
-.variable-kind-tooltip::before { left: 10.5px; }
-.variable-split-positive .variable-kind-tooltip::before, .variable-split-negative .variable-kind-tooltip::before { left: 11.5px; }
-/* Hover waits long enough to avoid flashing while the pointer crosses columns;
-   keyboard focus and an intentional touch tap disclose the hint immediately. */
-.variable-header:hover > .variable-kind-tooltip { opacity: 1; visibility: visible; transform: translateY(0); transition-delay: .35s; }
-.variable-header:focus > .variable-kind-tooltip, .variable-header:focus-within > .variable-kind-tooltip, .variable-kind-tooltip.touch-visible { opacity: 1; visibility: visible; transform: translateY(0); transition-delay: 0s; }
+/* The hint lives in a body portal: table cells can no longer crop it. Its
+   horizontal origin is the measured marker centre, so dots and both split
+   signs share exact automatic alignment rather than kind-specific offsets. */
+.variable-kind-tooltip-portal { position: fixed; z-index: 200; width: max-content; min-width: 0; max-width: min(240px, calc(100vw - 16px)); text-align: left; opacity: 1; visibility: visible; transform: translateX(-50%); transition: none; }
+.variable-kind-tooltip-portal::before { left: 50%; margin-left: -4px; }
 .tableau-grid sub { font-size: .65em; vertical-align: -.22em; }
 .variable-name { display: inline; white-space: nowrap; }
 .variable-name sub { font-size: .65em; line-height: 0; vertical-align: -.28em; }
@@ -350,15 +344,16 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 3px s
    prevents the browser from switching between button-grid and text baselines
    when a pivot appends a new step. */
 .tableau-number-slot { position: absolute; inset: 0; display: grid; place-items: center; }
-/* The magnitude owns the central track. Equal sign and balance tracks keep all
-   magnitudes aligned. The minus is a rule rather than a font glyph: this keeps
-   its gap fixed and puts it on exactly the same axis and weight as a fraction
-   bar at every font size and browser zoom. */
-.number-value { --math-rule-width: 1.25px; display: inline-grid; grid-template-columns: .58em auto .58em; column-gap: .08em; align-items: center; justify-items: stretch; line-height: 1; vertical-align: middle; }
-.number-value::after { content: ""; grid-column: 3; }
-.number-sign { grid-column: 1; width: .58em; height: var(--math-rule-width); justify-self: end; align-self: center; }
+/* In tableau cells the magnitude itself owns the centre. The rule-sign is
+   anchored to that magnitude's left edge, so its gap is constant even when a
+   fraction bar grows for wider numerators. In ordinary equations the same sign
+   remains in normal flow, preventing overlap in exported final-result points. */
+.number-value { --math-rule-width: 1.25px; position: relative; display: inline-flex; align-items: center; justify-content: center; line-height: 1; vertical-align: middle; }
+.inline-number-value { gap: .1em; }
+.number-sign { flex: 0 0 .58em; width: .58em; height: var(--math-rule-width); align-self: center; }
 .number-sign.negative { background: currentColor; }
-.number-magnitude { grid-column: 2; display: inline-flex; align-items: center; justify-content: center; }
+.aligned-number-value .number-sign { position: absolute; right: calc(100% + .1em); top: 50%; transform: translateY(-50%); }
+.number-magnitude { display: inline-flex; align-items: center; justify-content: center; }
 .fraction-value { align-items: center; }
 .fraction-stack { display: inline-grid; grid-template-rows: 1em var(--math-rule-width) 1em; align-items: center; justify-items: stretch; line-height: 1; min-width: 1.35em; font-size: .8em; }
 .fraction-stack::after { content: ""; grid-row: 2; width: 100%; height: var(--math-rule-width); background: currentColor; }
@@ -462,7 +457,7 @@ kbd { display: inline-flex; min-height: 22px; align-items: center; padding: 2px 
 .modal-footer { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 13px 22px; background: var(--surface-soft); border-top: 1px solid var(--line); }
 .field-label { display: grid; gap: 6px; color: var(--ink-soft); font-size: .8rem; font-weight: 650; }
 .field-label input, .field-label select { width: 100%; height: 41px; padding: 8px 10px; margin-top: 2px; font-weight: 500; }
-.blank-tableau-fields h3 { margin: 0 0 14px; font-size: .92rem; }
+.new-tableau-option-heading { margin: 0 0 14px; color: var(--muted); font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
 .two-column-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
 .example-library { max-height: 330px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 2px; overflow-y: auto; }
 .example-card { width: 100%; display: flex; align-items: center; gap: 12px; padding: 13px; text-align: left; border: 1px solid color-mix(in srgb, var(--brand) 30%, var(--line)); border-radius: 12px; background: var(--brand-soft); color: var(--ink); }
@@ -472,8 +467,9 @@ kbd { display: inline-flex; min-height: 22px; align-items: center; padding: 2px 
 .example-card strong { font-size: .84rem; }
 .example-card span { color: var(--muted); font-size: .76rem; }
 .example-arrow { font-size: 1.2rem !important; color: var(--brand) !important; }
-.or-divider { display: flex; align-items: center; gap: 10px; margin: 20px 0; color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; }
-.or-divider::before, .or-divider::after { content: ""; height: 1px; flex: 1; background: var(--line); }
+.or-divider { display: flex; align-items: center; gap: 10px; margin: 20px 0 14px; }
+.or-divider::after { content: ""; height: 1px; flex: 1; background: var(--line); }
+.or-divider .new-tableau-option-heading { margin: 0; }
 .modal-copy { margin: 0 0 15px; color: var(--muted); line-height: 1.55; font-size: .84rem; }
 .row-picker { display: grid; gap: 7px; max-height: 360px; overflow-y: auto; padding: 2px; }
 .row-picker-item { display: flex; align-items: center; gap: 10px; padding: 11px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); cursor: pointer; }
@@ -651,7 +647,7 @@ kbd { display: inline-flex; min-height: 22px; align-items: center; padding: 2px 
   .solution-stage { display: block; margin: 0 0 6mm; break-inside: auto; }
   .solution-stage:last-child { margin-bottom: 0; }
   .solution-stage-label { margin: 0 0 2mm; padding: 0; border: 0; border-radius: 0; color: #222; background: #fff; font-size: 9pt; }
-  .solution-stage-tableaux { display: block; border: 1pt solid #777; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+  .solution-stage-tableaux { display: block; border: 1.5pt solid #777; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
   .history-card .tableau-scroll { border: 0; }
   .solution-stage-tableaux .history-card + .history-card .tableau-scroll { border-top: 1pt solid #777; }
   .tableau-grid { width: 100%; min-width: 0 !important; }
@@ -660,7 +656,7 @@ kbd { display: inline-flex; min-height: 22px; align-items: center; padding: 2px 
   .tableau-grid col.variable-col { width: auto; }
   /* One CSS pixel is only .75pt and PDF rasterizers often drop it. A full
      typographic point keeps every separator stable across viewer zoom levels. */
-  .tableau-grid th, .tableau-grid td { position: static !important; min-width: 0; height: 7.5mm; padding: 1.2mm; border-right: 1pt solid #777 !important; border-bottom: 1pt solid #777 !important; border-left: 0 !important; background: #fff !important; }
+  .tableau-grid th, .tableau-grid td { position: static !important; min-width: 0; height: 5.4mm; padding: .65mm; border-right: 1pt solid #777 !important; border-bottom: 1pt solid #777 !important; border-left: 0 !important; background: #fff !important; }
   .tableau-number-slot { position: static; display: inline-grid; }
   .tableau-grid th:last-child, .tableau-grid td:last-child { border-right: 0 !important; }
   .tableau-grid .sticky-left, .tableau-grid .sticky-right, .tableau-grid .rhs-column, .tableau-grid .rhs-cell, .tableau-grid .objective-rhs { border-left: 0 !important; border-right: 1pt solid #777 !important; }

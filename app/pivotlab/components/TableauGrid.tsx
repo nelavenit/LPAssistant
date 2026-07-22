@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { NumberDisplay } from '../math/rational';
 import type { Algorithm, AppMode, PivotRecord, PivotSelection, Tableau, VariableKind } from '../model/tableau';
 import { cloneTableau, maximumEligibleColumn, minimumEligibleRow } from '../model/tableau';
@@ -51,7 +52,8 @@ export function TableauGrid({
   onRemoveConstraint,
 }: TableauGridProps) {
   const [hovered, setHovered] = useState<{ row: number; column: number } | null>(null);
-  const [tappedVariableTip, setTappedVariableTip] = useState<string | null>(null);
+  const [variableTip, setVariableTip] = useState<{ id: string; text: string; left: number; top: number } | null>(null);
+  const variableTipTimer = useRef<number | null>(null);
   const selectedColumn = selection
     ? tableau.variables.findIndex((variable) => variable.id === selection.variableId)
     : -1;
@@ -76,6 +78,45 @@ export function TableauGrid({
     onChange(next);
   };
 
+  const closeVariableTip = () => {
+    if (variableTipTimer.current !== null) window.clearTimeout(variableTipTimer.current);
+    variableTipTimer.current = null;
+    setVariableTip(null);
+  };
+
+  const openVariableTip = (header: HTMLElement, variableId: string, text: string, delayed: boolean) => {
+    if (variableTipTimer.current !== null) window.clearTimeout(variableTipTimer.current);
+    const reveal = () => {
+      const marker = header.querySelector<HTMLElement>('.variable-kind-marker');
+      if (!marker) return;
+      const bounds = marker.getBoundingClientRect();
+      setVariableTip({
+        id: variableId,
+        text,
+        left: bounds.left + bounds.width / 2,
+        // Keeping the portal below every marker prevents the split + sign from
+        // touching the pointer while preserving one tooltip level for all kinds.
+        top: bounds.bottom + 10,
+      });
+      variableTipTimer.current = null;
+    };
+    if (delayed) variableTipTimer.current = window.setTimeout(reveal, 350);
+    else reveal();
+  };
+
+  useEffect(() => {
+    if (!variableTip) return undefined;
+    // A fixed portal cannot follow a scrolling tableau without remeasurement;
+    // dismissing it is less surprising than leaving it detached from its mark.
+    const dismiss = () => closeVariableTip();
+    window.addEventListener('scroll', dismiss, true);
+    window.addEventListener('resize', dismiss);
+    return () => {
+      window.removeEventListener('scroll', dismiss, true);
+      window.removeEventListener('resize', dismiss);
+    };
+  }, [variableTip]);
+
   return (
     <div
       className={`tableau-scroll${compact ? ' compact-tableau' : ''}`}
@@ -87,6 +128,7 @@ export function TableauGrid({
       onMouseLeave={() => {
         setHovered(null);
         onHoverPivot?.(null);
+        closeVariableTip();
       }}
     >
       <table
@@ -108,12 +150,20 @@ export function TableauGrid({
                   className={`${hovered?.column === columnIndex ? 'column-hover' : ''} variable-header variable-${variable.kind}`}
                   tabIndex={editable ? undefined : 0}
                   aria-describedby={editable ? undefined : `variable-kind-tip-${variable.id}`}
+                  onMouseEnter={(event) => {
+                    if (!editable) openVariableTip(event.currentTarget, variable.id, variableKindHints[variable.kind], true);
+                  }}
+                  onMouseLeave={closeVariableTip}
+                  onFocus={(event) => {
+                    if (!editable) openVariableTip(event.currentTarget, variable.id, variableKindHints[variable.kind], false);
+                  }}
                   onPointerUp={(event) => {
                     if (event.pointerType !== 'touch') return;
-                    setTappedVariableTip((current) => current === variable.id ? null : variable.id);
+                    if (variableTip?.id === variable.id) closeVariableTip();
+                    else openVariableTip(event.currentTarget, variable.id, variableKindHints[variable.kind], false);
                   }}
                   onBlur={(event) => {
-                    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setTappedVariableTip(null);
+                    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) closeVariableTip();
                   }}
                 >
                   <span className="variable-kind-marker" aria-hidden="true">
@@ -121,13 +171,6 @@ export function TableauGrid({
                   </span>
                   {/* The edit-mode selector already states the type; a second
                       hint there is redundant and can be clipped by the editor. */}
-                  {!editable && (
-                    <span
-                      id={`variable-kind-tip-${variable.id}`}
-                      className={`control-tooltip variable-kind-tooltip${tappedVariableTip === variable.id ? ' touch-visible' : ''}`}
-                      role="tooltip"
-                    >{variableKindHints[variable.kind]}</span>
-                  )}
                   {editable ? (
                     <div className="header-editor">
                       <input
@@ -233,7 +276,7 @@ export function TableauGrid({
                           onCommit={(number) => update((next) => { next.rows[rowIndex].values[columnIndex] = number; })}
                         />
                       ) : compact ? (
-                        <span className="tableau-number-slot"><NumberValue value={value} display={display} /></span>
+                        <span className="tableau-number-slot"><NumberValue value={value} display={display} alignMagnitude /></span>
                       ) : (
                         <button
                           type="button"
@@ -252,7 +295,7 @@ export function TableauGrid({
                             setHovered(null);
                           }}
                         >
-                          <NumberValue value={value} display={display} />
+                          <NumberValue value={value} display={display} alignMagnitude />
                         </button>
                       )}
                     </td>
@@ -269,7 +312,7 @@ export function TableauGrid({
                       onCommit={(number) => update((next) => { next.rows[rowIndex].values[tableau.variables.length] = number; })}
                     />
                   ) : (
-                    <span className="tableau-number-slot"><NumberValue value={row.values[tableau.variables.length]} display={display} /></span>
+                    <span className="tableau-number-slot"><NumberValue value={row.values[tableau.variables.length]} display={display} alignMagnitude /></span>
                   )}
                 </td>
               </tr>
@@ -298,7 +341,7 @@ export function TableauGrid({
                     gridColumn={columnIndex}
                     onCommit={(number) => update((next) => { next.objective[columnIndex] = number; })}
                   />
-                ) : <span className="tableau-number-slot"><NumberValue value={value} display={display} /></span>}
+                ) : <span className="tableau-number-slot"><NumberValue value={value} display={display} alignMagnitude /></span>}
               </td>
             ))}
             <td className="objective-rhs sticky-right">
@@ -311,11 +354,20 @@ export function TableauGrid({
                   gridColumn={tableau.variables.length}
                   onCommit={(number) => update((next) => { next.objective[next.variables.length] = number; })}
                 />
-              ) : <span className="tableau-number-slot"><NumberValue value={tableau.objective[tableau.variables.length]} display={display} /></span>}
+              ) : <span className="tableau-number-slot"><NumberValue value={tableau.objective[tableau.variables.length]} display={display} alignMagnitude /></span>}
             </td>
           </tr>
         </tfoot>
       </table>
+      {variableTip && createPortal(
+        <span
+          id={`variable-kind-tip-${variableTip.id}`}
+          className="control-tooltip variable-kind-tooltip variable-kind-tooltip-portal"
+          role="tooltip"
+          style={{ left: variableTip.left, top: variableTip.top }}
+        >{variableTip.text}</span>,
+        document.body,
+      )}
     </div>
   );
 }

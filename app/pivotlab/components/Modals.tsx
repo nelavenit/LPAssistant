@@ -64,14 +64,14 @@ export function NewProjectModal({ onClose, onCreate, onLoadExample }: NewProject
     <Modal title="New tableau" onClose={onClose} wide>
       <div className="modal-body">
         <section className="blank-tableau-fields" aria-labelledby="blank-tableau-heading">
-          <h3 id="blank-tableau-heading">Create a blank tableau</h3>
+          <h3 className="new-tableau-option-heading" id="blank-tableau-heading">Create a blank tableau</h3>
           <label className="field-label">Title<input value={title} onChange={(event) => setTitle(event.target.value)} /></label>
           <div className="two-column-fields">
             <label className="field-label">Constraints<input type="number" min="1" max="200" value={rows} onChange={(event) => setRows(Number(event.target.value))} /></label>
             <label className="field-label">Variables<input type="number" min="1" max="200" value={variables} onChange={(event) => setVariables(Number(event.target.value))} /></label>
           </div>
         </section>
-        <div className="or-divider"><span>or load an example</span></div>
+        <div className="or-divider"><h3 className="new-tableau-option-heading">Or load an example</h3></div>
         <div className="example-library">
           {exampleProblems.map((example) => (
             <button className="example-card" type="button" key={example.id} onClick={() => onLoadExample(example.id)}>
@@ -198,7 +198,7 @@ export function SettingsModal({ settings, onChange, onClose }: SettingsModalProp
           })}>Restore appearance defaults</button>
           <section className="about-simplex-assistant">
             <span className="eyebrow">About</span>
-            <h3>Simplex Assistant 0.9.2</h3>
+            <h3>Simplex Assistant 0.9.3</h3>
             <p>This manual simplex-method practice tool keeps every pivot decision yours; only zero entries are forbidden.</p>
             <p>All calculations use arbitrary-precision rational arithmetic.</p>
           </section>
