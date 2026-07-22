@@ -36,17 +36,29 @@ test('the example library covers the requested structural and pathological cases
     'dual-harder',
     'degenerate-tie',
     'alternate-optima',
-    'unbounded',
-    'infeasible',
+    'unbounded-small',
+    'unbounded-larger',
+    'unfeasible-small',
+    'unfeasible-larger',
     'unrestricted-split',
   ]) assert.equal(ids.has(required), true, required);
-  assert.ok(examplesModel.exampleProblems.length >= 14);
+  assert.ok(examplesModel.exampleProblems.length >= 15);
   assert.equal(new Set(examplesModel.exampleProblems.map((example) => example.title)).size, examplesModel.exampleProblems.length);
 
   for (const example of examplesModel.exampleProblems) {
     const tableau = example.create();
     tableauModel.assertTableauShape(tableau);
     assert.equal(tableau.title, example.title);
+  }
+});
+
+test('examples use family-local slack names and omit the retired textbook default', () => {
+  assert.equal(examplesModel.exampleProblems.some((example) => example.id === 'textbook-7-4-1'), false);
+  for (const example of examplesModel.exampleProblems) {
+    const slackNames = example.create().variables
+      .filter((variable) => variable.kind === 'slack')
+      .map((variable) => variable.name);
+    assert.deepEqual(slackNames, slackNames.map((_, index) => `s${index + 1}`), example.id);
   }
 });
 
