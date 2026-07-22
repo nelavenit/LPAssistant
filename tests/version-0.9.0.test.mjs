@@ -14,3 +14,12 @@ test('the display selector uses a native, optically centered slash', async () =>
   assert.match(css, /\.display-fraction-slash \{[^}]*top: -\.045em;/s);
   assert.doesNotMatch(css, /\.display-fraction-slash \{[^}]*transform: rotate/s);
 });
+
+test('print releases the viewport clip and paginates large tableaux by row', async () => {
+  const css = await source('../app/globals.css');
+  const printCss = css.slice(css.indexOf('@media print'));
+  assert.match(printCss, /\.app-shell\.workspace-open \{ height: auto !important; overflow: visible !important; \}/);
+  assert.match(printCss, /\.tableau-step, \.history-card \{ break-inside: auto; \}/);
+  assert.match(printCss, /\.tableau-grid tr \{ break-inside: avoid; page-break-inside: avoid; \}/);
+  assert.doesNotMatch(printCss, /\.tableau-step, \.history-card \{ break-inside: avoid; \}/);
+});

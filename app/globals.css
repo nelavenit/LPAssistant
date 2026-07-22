@@ -603,12 +603,15 @@ kbd { display: inline-flex; min-height: 22px; align-items: center; padding: 2px 
   :root { --table-font-size: 9.5pt !important; color-scheme: light; }
   body { zoom: 1 !important; margin: 0; background: #fff !important; color: #000 !important; }
   .app-shell { min-height: auto; }
+  /* The interactive workspace deliberately clips to one viewport. Printing must
+     release that constraint so long and multi-stage tableaux can paginate. */
+  .app-shell.workspace-open { height: auto !important; overflow: visible !important; }
   .topbar, .commandbar, .inspector-card, .toast, .modal-backdrop, .history-intro, .restore-step { display: none !important; }
   .workspace-layout, .app-shell > .history-main { display: none !important; }
   .print-solution-record { display: block; max-width: none; padding: 8mm; }
   .tableau-card, .history-card, .history-card.current { box-shadow: none; border: 0; border-radius: 0; margin: 0; }
   .tableau-card { break-inside: auto; }
-  .tableau-step, .history-card { break-inside: avoid; }
+  .tableau-step, .history-card { break-inside: auto; }
   .pivot-ratio-tooltip { display: none; }
   .history-view, .history-list { display: block; gap: 0; }
   .tableau-sequence { min-height: 0; max-height: none; overflow: visible; }
@@ -625,6 +628,7 @@ kbd { display: inline-flex; min-height: 22px; align-items: center; padding: 2px 
   .history-card .tableau-scroll { border: 0; }
   .solution-stage-tableaux .history-card + .history-card .tableau-scroll { border-top: 1px solid #777; }
   .tableau-grid { width: 100%; min-width: 0 !important; }
+  .tableau-grid tr { break-inside: avoid; page-break-inside: avoid; }
   .tableau-grid col.basis-col, .tableau-grid col.rhs-col { width: 9%; }
   .tableau-grid col.variable-col { width: auto; }
   .tableau-grid th, .tableau-grid td { position: static !important; min-width: 0; height: 7.5mm; padding: 1.2mm; border-right: 1px solid #777 !important; border-bottom: 1px solid #777 !important; border-left: 0 !important; background: #fff !important; }
