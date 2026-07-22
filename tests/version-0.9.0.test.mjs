@@ -60,3 +60,10 @@ test('all download and PDF paths share export-setting filenames', async () => {
   assert.match(app, /document\.title = fileStem/);
   assert.match(app, /document\.title = applicationTitle/);
 });
+
+test('the tableau block does not repeat the problem name', async () => {
+  const app = await source('../app/pivotlab/App.tsx');
+  const header = app.slice(app.indexOf('<header className="tableau-card-header">'), app.indexOf('<div className="tableau-sequence">'));
+  assert.match(header, /<h1>Simplex Method Tableau<\/h1>/);
+  assert.doesNotMatch(header, /current\.title/);
+});
