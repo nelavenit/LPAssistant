@@ -195,3 +195,11 @@ test('the new-tableau dialog renders the curated example library', async () => {
   assert.match(examples, /id: 'dual-harder'/);
   assert.match(css, /\.example-library \{[^}]*grid-template-columns: repeat\(2,/s);
 });
+
+test('README documents the substantive 0.9.0 capabilities without visual trivia', async () => {
+  const readme = await source('../README.md');
+  assert.match(readme, /Simplex Assistant 0\.9\.0/);
+  assert.match(readme, /unrestricted-variable splitting/);
+  assert.match(readme, /curated example library/);
+  assert.doesNotMatch(readme, /colored variable|green dot|tooltip delay/i);
+});
