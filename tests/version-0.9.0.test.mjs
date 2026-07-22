@@ -42,7 +42,7 @@ test('problem names remain editable without invalidating pivot history', async (
 test('the new-tableau dialog presents blank creation before examples', async () => {
   const modal = await source('../app/pivotlab/components/Modals.tsx');
   const blank = modal.indexOf('Create a blank tableau');
-  const example = modal.indexOf('Load textbook example');
+  const example = modal.indexOf('className="example-library"');
   assert.ok(blank >= 0 && example > blank);
   assert.match(modal, /or load an example/);
 });
@@ -178,4 +178,20 @@ test('variable markers explain themselves on delayed hover, focus, and touch', a
   assert.match(grid, /role="tooltip"/);
   assert.match(css, /\.variable-header:hover > \.variable-kind-tooltip \{[^}]*transition-delay: \.35s;/s);
   assert.match(css, /\.variable-header:focus > \.variable-kind-tooltip, \.variable-header:focus-within > \.variable-kind-tooltip, \.variable-kind-tooltip\.touch-visible/);
+});
+
+test('the new-tableau dialog renders the curated example library', async () => {
+  const [app, modal, examples, css] = await Promise.all([
+    source('../app/pivotlab/App.tsx'),
+    source('../app/pivotlab/components/Modals.tsx'),
+    source('../app/pivotlab/model/examples.ts'),
+    source('../app/globals.css'),
+  ]);
+  assert.match(app, /createExampleProblem\(id\)/);
+  assert.match(modal, /exampleProblems\.map/);
+  assert.match(examples, /id: 'dantzig-cycling'/);
+  assert.match(examples, /id: 'bland-longer'/);
+  assert.match(examples, /id: 'dual-easier'/);
+  assert.match(examples, /id: 'dual-harder'/);
+  assert.match(css, /\.example-library \{[^}]*grid-template-columns: repeat\(2,/s);
 });

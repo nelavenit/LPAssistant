@@ -23,6 +23,7 @@ import {
 } from './model/tableau';
 import { deserializeProject, serializeProject } from './model/project';
 import { groupTableauStages } from './model/stages';
+import { createExampleProblem } from './model/examples';
 import { safeFileName } from './export/naming';
 import {
   createProblemHistoryRecord,
@@ -560,7 +561,7 @@ export default function App() {
       {modal === 'new' && <NewProjectModal
         onClose={() => setModal(null)}
         onCreate={(rows, variables, title) => { reset(createBlankTableau(rows, variables, title)); setModal(null); }}
-        onLoadExample={() => { reset(createTextbookExample()); setModal(null); }}
+        onLoadExample={(id) => { reset(createExampleProblem(id)); setModal(null); }}
       />}
       {modal === 'phase1' && <PhaseOneModal tableau={current} onClose={() => setModal(null)} onStart={(rowIds) => safely(() => {
         const next = startPhaseOne(current, rowIds);

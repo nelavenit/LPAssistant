@@ -3,6 +3,7 @@ import type { AppSettings, ShortcutAction } from '../app/settings';
 import { defaultSettings, shortcutFromEvent, shortcutLabels } from '../app/settings';
 import { createTableauHistoryGraphic, tableauGraphicToPng } from '../export/tableauGraphic';
 import { exportFileStem } from '../export/naming';
+import { exampleProblems } from '../model/examples';
 import type { NumberDisplay } from '../math/rational';
 import type { Tableau } from '../model/tableau';
 import {
@@ -52,7 +53,7 @@ export function Modal({ title, eyebrow, onClose, children, wide = false }: Modal
 interface NewProjectModalProps {
   onClose: () => void;
   onCreate: (rows: number, variables: number, title: string) => void;
-  onLoadExample: () => void;
+  onLoadExample: (id: string) => void;
 }
 
 export function NewProjectModal({ onClose, onCreate, onLoadExample }: NewProjectModalProps) {
@@ -60,7 +61,7 @@ export function NewProjectModal({ onClose, onCreate, onLoadExample }: NewProject
   const [variables, setVariables] = useState(5);
   const [title, setTitle] = useState('Untitled tableau');
   return (
-    <Modal title="New tableau" onClose={onClose}>
+    <Modal title="New tableau" onClose={onClose} wide>
       <div className="modal-body">
         <section className="blank-tableau-fields" aria-labelledby="blank-tableau-heading">
           <h3 id="blank-tableau-heading">Create a blank tableau</h3>
@@ -71,11 +72,15 @@ export function NewProjectModal({ onClose, onCreate, onLoadExample }: NewProject
           </div>
         </section>
         <div className="or-divider"><span>or load an example</span></div>
-        <button className="example-card" type="button" onClick={onLoadExample}>
-          <div className="example-icon"><GridIcon /></div>
-          <div><strong>Load textbook example</strong><span>Example 7.4.1 · 3 constraints · 7 variables</span></div>
-          <span className="example-arrow">→</span>
-        </button>
+        <div className="example-library">
+          {exampleProblems.map((example) => (
+            <button className="example-card" type="button" key={example.id} onClick={() => onLoadExample(example.id)}>
+              <div className="example-icon"><GridIcon /></div>
+              <div><strong>{example.title}</strong><span>{example.description}</span></div>
+              <span className="example-arrow">→</span>
+            </button>
+          ))}
+        </div>
       </div>
       <footer className="modal-footer">
         <button className="secondary-button" type="button" onClick={onClose}>Cancel</button>
