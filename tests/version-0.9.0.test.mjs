@@ -67,3 +67,13 @@ test('the tableau block does not repeat the problem name', async () => {
   assert.match(header, /<h1>Simplex Method Tableau<\/h1>/);
   assert.doesNotMatch(header, /current\.title/);
 });
+
+test('dark mode restores green as a restrained interactive accent', async () => {
+  const css = await source('../app/globals.css');
+  const dark = css.match(/:root\[data-theme="dark"\] \{([\s\S]*?)\n\}/)?.[1] ?? '';
+  assert.match(dark, /--brand: #3fb950;/);
+  assert.match(dark, /--brand-hover: #56d364;/);
+  assert.match(dark, /--bg: #111111;/);
+  assert.match(dark, /--surface: #181818;/);
+  assert.match(css, /\.brand-mark \{[^}]*background: var\(--brand\);/s);
+});
