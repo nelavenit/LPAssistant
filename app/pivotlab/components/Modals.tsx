@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { AppSettings, ShortcutAction } from '../app/settings';
 import { defaultSettings, shortcutFromEvent, shortcutLabels } from '../app/settings';
 import { createTableauHistoryGraphic, tableauGraphicToPng } from '../export/tableauGraphic';
+import { exportFileStem } from '../export/naming';
 import type { NumberDisplay } from '../math/rational';
 import type { Tableau } from '../model/tableau';
 import {
@@ -250,7 +251,7 @@ interface ExportModalProps {
   onIncludeSolutionChange: (include: boolean) => void;
   onClose: () => void;
   onNotice: (message: string) => void;
-  onPrintHistory: (includeResult: boolean, includeSolution: boolean) => void;
+  onPrintHistory: (includeResult: boolean, includeSolution: boolean, fileStem: string) => void;
 }
 
 export function ExportModal({
@@ -269,6 +270,7 @@ export function ExportModal({
   const [format, setFormat] = useState<ExportFormat>('latex');
   const [imageExporting, setImageExporting] = useState<'png' | 'transparent-png' | 'svg' | null>(null);
   const exportOptions = { completeSolution: includeSolution, includeResult };
+  const fileStem = exportFileStem(tableau.title, exportOptions);
   const content = format === 'latex'
     ? exportLatexProject(history, currentIndex, display, exportOptions)
     : format === 'markdown'
@@ -293,16 +295,15 @@ export function ExportModal({
         completeSolution: includeSolution,
         resultTableau: tableau,
       });
-      const scopeName = includeSolution ? 'complete-solution' : 'initial-problem';
       if (kind === 'svg') {
-        downloadBlob(`${safeName(tableau.title)}-${scopeName}.svg`, new Blob(
+        downloadBlob(`${fileStem}.svg`, new Blob(
           [graphic.svg],
           { type: 'image/svg+xml;charset=utf-8' },
         ));
       } else {
         const png = await tableauGraphicToPng(graphic);
         downloadBlob(
-          `${safeName(tableau.title)}-${scopeName}${transparent ? '-no-background' : ''}.png`,
+          `${fileStem}${transparent ? '-no-background' : ''}.png`,
           png,
         );
       }
@@ -325,7 +326,7 @@ export function ExportModal({
           <textarea className="export-preview" readOnly value={content} aria-label="Export preview" onFocus={(event) => event.currentTarget.select()} />
           <div className="button-row">
             <button className="primary-button" type="button" onClick={copy}><CopyIcon /> Copy</button>
-            <button className="secondary-button" type="button" onClick={() => downloadText(`${safeName(tableau.title)}.${extension}`, content)}><SaveIcon /> Download</button>
+            <button className="secondary-button" type="button" onClick={() => downloadText(`${fileStem}.${extension}`, content)}><SaveIcon /> Download</button>
           </div>
         </div>
         <div className="export-actions-panel">
@@ -339,7 +340,7 @@ export function ExportModal({
             <span className="custom-checkbox"><CheckIcon /></span>
             <span><strong>Include final result</strong><small>Append f<sub>min</sub> and the decision-variable point independently of the selected export scope.</small></span>
           </label>
-          <div className="export-action-card"><strong>{includeSolution ? 'Complete solution PDF' : 'Initial problem PDF'}</strong><span>Print {includeSolution ? 'every tableau through the current step' : 'the initial problem'} with the current number display, or save it as PDF from your browser’s print dialog.</span><button className="secondary-button" type="button" onClick={() => onPrintHistory(includeResult, includeSolution)}>Print / PDF</button></div>
+          <div className="export-action-card"><strong>{includeSolution ? 'Complete solution PDF' : 'Initial problem PDF'}</strong><span>Print {includeSolution ? 'every tableau through the current step' : 'the initial problem'} with the current number display, or save it as PDF from your browser’s print dialog.</span><button className="secondary-button" type="button" onClick={() => onPrintHistory(includeResult, includeSolution, fileStem)}>Print / PDF</button></div>
           <div className="export-action-card">
             <strong>{includeSolution ? 'Complete solution image' : 'Initial problem image'}</strong>
             <span>Export {includeSolution ? 'every tableau through the current step' : 'the initial problem'} with the current number display as PNG or SVG.</span>
@@ -349,7 +350,7 @@ export function ExportModal({
               <button className="secondary-button" type="button" disabled={imageExporting !== null} onClick={() => void exportImage('svg')}>{imageExporting === 'svg' ? 'Creating…' : 'SVG'}</button>
             </div>
           </div>
-          <div className="export-action-card"><strong>Editable Simplex Assistant project</strong><span>{includeSolution ? 'Preserves the complete solution, exact values, and Phase I state.' : 'Saves only the editable initial problem with exact values.'}</span><button className="secondary-button" type="button" onClick={() => downloadText(`${safeName(tableau.title)}.simplex-assistant.json`, includeSolution ? serializeProject(history, currentIndex) : serializeProject(history.slice(0, 1), 0))}>Save project</button></div>
+          <div className="export-action-card"><strong>Editable Simplex Assistant project</strong><span>{includeSolution ? 'Preserves the complete solution, exact values, and Phase I state.' : 'Saves only the editable initial problem with exact values.'}</span><button className="secondary-button" type="button" onClick={() => downloadText(`${fileStem}.simplex-assistant.json`, includeSolution ? serializeProject(history, currentIndex) : serializeProject(history.slice(0, 1), 0))}>Save project</button></div>
         </div>
       </div>
     </Modal>
@@ -370,8 +371,4 @@ function downloadBlob(filename: string, blob: Blob) {
   anchor.click();
   anchor.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), 0);
-}
-
-function safeName(value: string): string {
-  return value.trim().replace(/[^a-z0-9._-]+/gi, '-').replace(/^-|-$/g, '') || 'tableau';
 }

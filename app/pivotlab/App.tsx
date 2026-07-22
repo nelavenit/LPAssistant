@@ -23,6 +23,7 @@ import {
 } from './model/tableau';
 import { deserializeProject, serializeProject } from './model/project';
 import { groupTableauStages } from './model/stages';
+import { safeFileName } from './export/naming';
 import {
   createProblemHistoryRecord,
   loadProblemHistory,
@@ -265,7 +266,7 @@ export default function App() {
   };
 
   const saveProject = () => {
-    downloadText(`${safeName(current.title)}.simplex-assistant.json`, serializeProject(history, currentIndex));
+    downloadText(`${safeFileName(current.title)}.simplex-assistant.json`, serializeProject(history, currentIndex));
     showNotice('Project saved.');
   };
 
@@ -583,12 +584,17 @@ export default function App() {
         onIncludeSolutionChange={setIncludeExportSolution}
         onClose={() => setModal(null)}
         onNotice={showNotice}
-        onPrintHistory={(includeResult, includeSolution) => {
+        onPrintHistory={(includeResult, includeSolution, fileStem) => {
           setIncludePrintResult(includeResult);
           setPrintCompleteSolution(includeSolution);
           setIsPrinting(true);
           window.setTimeout(() => {
+            // Browsers derive the proposed PDF filename from document.title.
+            // Restore the application title as soon as the print dialog closes.
+            const applicationTitle = document.title;
+            document.title = fileStem;
             window.addEventListener('afterprint', () => {
+              document.title = applicationTitle;
               setIncludePrintResult(false);
               setIsPrinting(false);
             }, { once: true });
@@ -612,8 +618,4 @@ export default function App() {
       {notice && <div className="toast" role="status"><InfoIcon /><span>{notice}</span></div>}
     </div>
   );
-}
-
-function safeName(value: string): string {
-  return value.trim().replace(/[^a-z0-9._-]+/gi, '-').replace(/^-|-$/g, '') || 'tableau';
 }

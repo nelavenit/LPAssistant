@@ -46,3 +46,17 @@ test('the new-tableau dialog presents blank creation before examples', async () 
   assert.ok(blank >= 0 && example > blank);
   assert.match(modal, /or load an example/);
 });
+
+test('all download and PDF paths share export-setting filenames', async () => {
+  const [app, modal] = await Promise.all([
+    source('../app/pivotlab/App.tsx'),
+    source('../app/pivotlab/components/Modals.tsx'),
+  ]);
+  assert.match(modal, /const fileStem = exportFileStem\(tableau\.title, exportOptions\)/);
+  assert.match(modal, /`\$\{fileStem\}\.\$\{extension\}`/);
+  assert.match(modal, /`\$\{fileStem\}\.svg`/);
+  assert.match(modal, /`\$\{fileStem\}\$\{transparent \? '-no-background' : ''\}\.png`/);
+  assert.match(modal, /`\$\{fileStem\}\.simplex-assistant\.json`/);
+  assert.match(app, /document\.title = fileStem/);
+  assert.match(app, /document\.title = applicationTitle/);
+});
