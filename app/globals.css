@@ -502,7 +502,9 @@ kbd { display: inline-flex; min-height: 22px; align-items: center; padding: 2px 
 .about-simplex-assistant h3 { margin: 0 0 8px; font-size: .88rem; }
 .about-simplex-assistant p { margin: 6px 0 0; color: var(--muted); font-size: .78rem; line-height: 1.5; }
 
-.export-layout { display: grid; grid-template-columns: 1.3fr .7fr; gap: 20px; }
+.export-layout { display: grid; gap: 16px; }
+.export-settings-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.export-formats { display: grid; grid-template-columns: 1.3fr .7fr; gap: 20px; }
 .format-tabs { display: inline-flex; padding: 3px; border-radius: 9px; background: var(--surface-muted); }
 .format-tabs button { border: 0; border-radius: 6px; background: transparent; color: var(--muted); padding: 6px 12px; font-size: .78rem; font-weight: 650; }
 .format-tabs button.active { color: var(--ink); background: var(--surface); box-shadow: var(--shadow-sm); }
@@ -558,7 +560,7 @@ kbd { display: inline-flex; min-height: 22px; align-items: center; padding: 2px 
   .brand-block > div:last-child span, .document-title > span:last-child { display: none; }
   .document-title { display: block; }
   .commandbar { padding-inline: 14px; overflow-x: auto; overflow-y: hidden; }
-  .settings-grid, .export-layout { grid-template-columns: 1fr; }
+  .settings-grid, .export-formats, .export-settings-row { grid-template-columns: 1fr; }
   .shortcut-settings { padding-left: 0; padding-top: 22px; border-left: 0; border-top: 1px solid var(--line); }
 }
 

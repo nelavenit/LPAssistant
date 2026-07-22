@@ -101,3 +101,15 @@ test('PDF and print separators are at least one typographic point', async () => 
   assert.match(printCss, /\.tableau-grid \.sticky-left \{ border-right-width: 1\.5pt !important; \}/);
   assert.doesNotMatch(printCss, /border-(?:right|bottom|top): 1px solid #777/);
 });
+
+test('shared export options precede every export format', async () => {
+  const [modal, css] = await Promise.all([
+    source('../app/pivotlab/components/Modals.tsx'),
+    source('../app/globals.css'),
+  ]);
+  const settings = modal.indexOf('className="export-settings-row"');
+  const formats = modal.indexOf('className="export-formats"');
+  assert.ok(settings >= 0 && formats > settings);
+  assert.match(css, /\.export-settings-row \{[^}]*grid-template-columns: repeat\(2,/s);
+  assert.match(css, /\.export-formats \{[^}]*grid-template-columns: 1\.3fr \.7fr;/s);
+});

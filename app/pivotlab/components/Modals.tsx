@@ -317,19 +317,7 @@ export function ExportModal({
   return (
     <Modal title="Export" onClose={onClose} wide>
       <div className="modal-body export-layout">
-        <div className="export-options">
-          <div className="format-tabs" role="tablist">
-            {(['latex', 'markdown', 'csv'] as const).map((candidate) => (
-              <button key={candidate} type="button" className={format === candidate ? 'active' : ''} onClick={() => setFormat(candidate)}>{candidate === 'latex' ? 'LaTeX' : candidate === 'markdown' ? 'Markdown' : 'CSV'}</button>
-            ))}
-          </div>
-          <textarea className="export-preview" readOnly value={content} aria-label="Export preview" onFocus={(event) => event.currentTarget.select()} />
-          <div className="button-row">
-            <button className="primary-button" type="button" onClick={copy}><CopyIcon /> Copy</button>
-            <button className="secondary-button" type="button" onClick={() => downloadText(`${fileStem}.${extension}`, content)}><SaveIcon /> Download</button>
-          </div>
-        </div>
-        <div className="export-actions-panel">
+        <section className="export-settings-row" aria-label="Export options">
           <label className="export-result-toggle">
             <input type="checkbox" checked={includeSolution} onChange={(event) => onIncludeSolutionChange(event.target.checked)} />
             <span className="custom-checkbox"><CheckIcon /></span>
@@ -340,17 +328,33 @@ export function ExportModal({
             <span className="custom-checkbox"><CheckIcon /></span>
             <span><strong>Include final result</strong><small>Append f<sub>min</sub> and the decision-variable point independently of the selected export scope.</small></span>
           </label>
-          <div className="export-action-card"><strong>{includeSolution ? 'Complete solution PDF' : 'Initial problem PDF'}</strong><span>Print {includeSolution ? 'every tableau through the current step' : 'the initial problem'} with the current number display, or save it as PDF from your browser’s print dialog.</span><button className="secondary-button" type="button" onClick={() => onPrintHistory(includeResult, includeSolution, fileStem)}>Print / PDF</button></div>
-          <div className="export-action-card">
-            <strong>{includeSolution ? 'Complete solution image' : 'Initial problem image'}</strong>
-            <span>Export {includeSolution ? 'every tableau through the current step' : 'the initial problem'} with the current number display as PNG or SVG.</span>
-            <div className="image-export-buttons">
-              <button className="secondary-button" type="button" disabled={imageExporting !== null} onClick={() => void exportImage('png')}>{imageExporting === 'png' ? 'Creating…' : 'PNG'}</button>
-              <button className="secondary-button" type="button" disabled={imageExporting !== null} onClick={() => void exportImage('transparent-png')}>{imageExporting === 'transparent-png' ? 'Creating…' : 'PNG · no background'}</button>
-              <button className="secondary-button" type="button" disabled={imageExporting !== null} onClick={() => void exportImage('svg')}>{imageExporting === 'svg' ? 'Creating…' : 'SVG'}</button>
+        </section>
+        <div className="export-formats">
+          <div className="export-options">
+            <div className="format-tabs" role="tablist">
+              {(['latex', 'markdown', 'csv'] as const).map((candidate) => (
+                <button key={candidate} type="button" className={format === candidate ? 'active' : ''} onClick={() => setFormat(candidate)}>{candidate === 'latex' ? 'LaTeX' : candidate === 'markdown' ? 'Markdown' : 'CSV'}</button>
+              ))}
+            </div>
+            <textarea className="export-preview" readOnly value={content} aria-label="Export preview" onFocus={(event) => event.currentTarget.select()} />
+            <div className="button-row">
+              <button className="primary-button" type="button" onClick={copy}><CopyIcon /> Copy</button>
+              <button className="secondary-button" type="button" onClick={() => downloadText(`${fileStem}.${extension}`, content)}><SaveIcon /> Download</button>
             </div>
           </div>
-          <div className="export-action-card"><strong>Editable Simplex Assistant project</strong><span>{includeSolution ? 'Preserves the complete solution, exact values, and Phase I state.' : 'Saves only the editable initial problem with exact values.'}</span><button className="secondary-button" type="button" onClick={() => downloadText(`${fileStem}.simplex-assistant.json`, includeSolution ? serializeProject(history, currentIndex) : serializeProject(history.slice(0, 1), 0))}>Save project</button></div>
+          <div className="export-actions-panel">
+            <div className="export-action-card"><strong>{includeSolution ? 'Complete solution PDF' : 'Initial problem PDF'}</strong><span>Print {includeSolution ? 'every tableau through the current step' : 'the initial problem'} with the current number display, or save it as PDF from your browser’s print dialog.</span><button className="secondary-button" type="button" onClick={() => onPrintHistory(includeResult, includeSolution, fileStem)}>Print / PDF</button></div>
+            <div className="export-action-card">
+              <strong>{includeSolution ? 'Complete solution image' : 'Initial problem image'}</strong>
+              <span>Export {includeSolution ? 'every tableau through the current step' : 'the initial problem'} with the current number display as PNG or SVG.</span>
+              <div className="image-export-buttons">
+                <button className="secondary-button" type="button" disabled={imageExporting !== null} onClick={() => void exportImage('png')}>{imageExporting === 'png' ? 'Creating…' : 'PNG'}</button>
+                <button className="secondary-button" type="button" disabled={imageExporting !== null} onClick={() => void exportImage('transparent-png')}>{imageExporting === 'transparent-png' ? 'Creating…' : 'PNG · no background'}</button>
+                <button className="secondary-button" type="button" disabled={imageExporting !== null} onClick={() => void exportImage('svg')}>{imageExporting === 'svg' ? 'Creating…' : 'SVG'}</button>
+              </div>
+            </div>
+            <div className="export-action-card"><strong>Editable Simplex Assistant project</strong><span>{includeSolution ? 'Preserves the complete solution, exact values, and Phase I state.' : 'Saves only the editable initial problem with exact values.'}</span><button className="secondary-button" type="button" onClick={() => downloadText(`${fileStem}.simplex-assistant.json`, includeSolution ? serializeProject(history, currentIndex) : serializeProject(history.slice(0, 1), 0))}>Save project</button></div>
+          </div>
         </div>
       </div>
     </Modal>
