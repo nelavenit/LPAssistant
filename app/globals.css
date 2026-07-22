@@ -234,10 +234,8 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 3px s
 .disabled-edit-tip.visible:hover .control-tooltip, .disabled-edit-tip.visible:focus-within .control-tooltip { opacity: 1; visibility: visible; transform: translateY(0); }
 .compact-control button { min-width: 60px; height: 32px; padding: 0 10px; display: grid; place-items: center; }
 .display-fraction-sample { display: inline; white-space: nowrap; line-height: 1; }
-/* Keep the digits in the parent's ordinary inline text flow: Firefox can stop
-   painting the first child of the former inline-flex at extreme browser zoom.
-   Only the native slash needs its own span for the optical adjustment. */
-.display-fraction-slash { position: relative; top: -.045em; margin-inline: .015em; }
+/* Firefox's extreme page zoom has repeatedly exposed disappearing glyphs when
+   this sample is split into children. It intentionally remains one text run. */
 .count-pill { min-width: 19px; height: 19px; border-radius: 10px; display: grid; place-items: center; padding: 0 5px; background: var(--surface-muted); font-size: .74rem; }
 .command-divider { height: 26px; width: 1px; background: var(--line); flex: 0 0 auto; }
 .command-spacer { flex: 1 1 auto; }
@@ -318,8 +316,10 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 3px s
 .variable-regular .variable-kind-marker { background: var(--variable-original); }
 .variable-artificial .variable-kind-marker { background: var(--accent); }
 .variable-split-positive .variable-kind-marker, .variable-split-negative .variable-kind-marker { left: 6px; top: 5px; width: 13px; height: 13px; border-radius: 0; background: transparent; }
-.variable-kind-tooltip { top: 27px; left: 7px; width: max-content; min-width: 0; max-width: 240px; text-align: left; transition-delay: 0s; }
-.variable-kind-tooltip::before { left: 4px; }
+/* Meet the pointer directly under the marker so the hint reads as an
+   explanation of the dot/sign rather than of the whole variable header. */
+.variable-kind-tooltip { top: 21px; left: -3px; width: max-content; min-width: 0; max-width: 240px; text-align: left; transition-delay: 0s; }
+.variable-kind-tooltip::before { left: 10px; }
 /* Hover waits long enough to avoid flashing while the pointer crosses columns;
    keyboard focus and an intentional touch tap disclose the hint immediately. */
 .variable-header:hover > .variable-kind-tooltip { opacity: 1; visibility: visible; transform: translateY(0); transition-delay: .35s; }
@@ -336,25 +336,22 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 3px s
 .pivot-cell-button:not(:disabled):hover { background: color-mix(in srgb, var(--brand-soft) 65%, transparent); }
 .pivot-cell-button:disabled { opacity: .48; }
 .hovered-pivot-cell { z-index: 12; }
-.pivot-ratio-tooltip { position: absolute; z-index: 40; top: calc(100% - 5px); left: 50%; width: max-content; min-width: 190px; max-width: 250px; transform: translateX(-50%); display: grid; gap: 7px; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--brand) 42%, var(--line)); border-radius: 10px; color: var(--ink); background: var(--surface-raised); box-shadow: var(--shadow-lg); font-size: .78rem; line-height: 1.2; pointer-events: none; animation: ratio-tip-in .1s ease-out; }
-.pivot-ratio-name { color: var(--ink-soft); font-size: .72rem; font-weight: 700; letter-spacing: .035em; text-transform: uppercase; }
-.pivot-ratio-calculation { display: flex; align-items: center; justify-content: center; gap: 7px; font-size: .86rem; }
-.pivot-ratio-calculation strong { color: var(--brand); font-size: 1.05rem; }
-.pivot-ratio-tooltip small { color: var(--brand); font-size: .7rem; font-weight: 700; }
 .selected-pivot { z-index: 2; background: var(--accent-soft) !important; }
 .selected-pivot::after, .historic-pivot::after { content: ""; position: absolute; inset: 13% 10%; border: 2px solid var(--accent); border-radius: 50%; pointer-events: none; transform: rotate(-5deg); z-index: 3; }
 .minimum-ratio::before { content: ""; position: absolute; top: 8px; right: 8px; width: 6px; height: 6px; border-radius: 50%; background: var(--brand); z-index: 4; }
 .recommended-ratio { color: var(--brand); font-weight: 750; }
 .not-eligible { color: var(--faint); }
-/* Completed steps render values directly in cells, whereas the active step
-   centers them inside buttons. An explicit middle baseline keeps both paths at
-   exactly the same vertical position when a new pivoting step is appended. */
-.number-value { position: relative; display: inline-flex; align-items: center; justify-content: center; line-height: 1; vertical-align: middle; }
-/* Center only the magnitude. The sign sits outside its left edge, so positive
-   and negative versions of the same value share an exact horizontal anchor. */
-.number-sign { position: absolute; top: 50%; right: calc(100% + .16em); line-height: 1; transform: translateY(-52%); }
-.number-magnitude { display: inline-flex; align-items: center; justify-content: center; }
-.fraction-value { display: inline-flex; align-items: center; }
+/* Both active and completed cells use the same full-cell centering slot. This
+   prevents the browser from switching between button-grid and text baselines
+   when a pivot appends a new step. */
+.tableau-number-slot { position: absolute; inset: 0; display: grid; place-items: center; }
+/* The magnitude owns the central track. Equal sign and balance tracks keep all
+   magnitudes aligned without taking the minus out of normal layout. */
+.number-value { display: inline-grid; grid-template-columns: .82em auto .82em; align-items: center; justify-items: stretch; line-height: 1; vertical-align: middle; }
+.number-value::after { content: ""; grid-column: 3; }
+.number-sign { grid-column: 1; justify-self: end; align-self: center; line-height: 1; }
+.number-magnitude { grid-column: 2; display: inline-flex; align-items: center; justify-content: center; }
+.fraction-value { align-items: center; }
 .fraction-stack { display: inline-grid; grid-template-rows: 1em 1.3px 1em; align-items: center; justify-items: stretch; line-height: 1; min-width: 1.35em; font-size: .8em; }
 .fraction-stack::after { content: ""; grid-row: 2; width: 100%; border-top: 1.3px solid currentColor; }
 .fraction-stack > span { display: flex; align-items: center; justify-content: center; padding: 0 .16em; }
@@ -635,7 +632,6 @@ kbd { display: inline-flex; min-height: 22px; align-items: center; padding: 2px 
   .tableau-card, .history-card, .history-card.current { box-shadow: none; border: 0; border-radius: 0; margin: 0; }
   .tableau-card { break-inside: auto; }
   .tableau-step, .history-card { break-inside: auto; }
-  .pivot-ratio-tooltip { display: none; }
   .history-view, .history-list { display: block; gap: 0; }
   .tableau-sequence { min-height: 0; max-height: none; overflow: visible; }
   .tableau-sequence .tableau-scroll { width: 100%; min-width: 0; }
@@ -657,6 +653,7 @@ kbd { display: inline-flex; min-height: 22px; align-items: center; padding: 2px 
   /* One CSS pixel is only .75pt and PDF rasterizers often drop it. A full
      typographic point keeps every separator stable across viewer zoom levels. */
   .tableau-grid th, .tableau-grid td { position: static !important; min-width: 0; height: 7.5mm; padding: 1.2mm; border-right: 1pt solid #777 !important; border-bottom: 1pt solid #777 !important; border-left: 0 !important; background: #fff !important; }
+  .tableau-number-slot { position: static; display: inline-grid; }
   .tableau-grid th:last-child, .tableau-grid td:last-child { border-right: 0 !important; }
   .tableau-grid .sticky-left, .tableau-grid .sticky-right, .tableau-grid .rhs-column, .tableau-grid .rhs-cell, .tableau-grid .objective-rhs { border-left: 0 !important; border-right: 1pt solid #777 !important; }
   .tableau-grid .sticky-left { border-right-width: 1.5pt !important; }
