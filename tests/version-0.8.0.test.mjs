@@ -176,7 +176,7 @@ test('light and dark theme tokens, inspector art, controls, and print frames ret
   assert.match(modal, /Restore appearance defaults/);
   assert.match(modal, /Restore shortcut defaults/);
   assert.doesNotMatch(modal, /eyebrow="Start fresh"/);
-  assert.match(css, /\.solution-stage-tableaux \{ display: block; border: 1px solid #777;/);
+  assert.match(css, /\.solution-stage-tableaux \{ display: block; border: 1pt solid #777;/);
   assert.match(css, /height: 7\.5mm; padding: 1\.2mm;/);
   assert.doesNotMatch(readme, /clearly named|tableau-only scrolling|persistent Pivot Inspector/i);
 });

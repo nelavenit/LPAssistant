@@ -92,3 +92,12 @@ test('the variable type selector calls user variables original', async () => {
   assert.match(grid, /<option value="regular">Original<\/option>/);
   assert.doesNotMatch(grid, /<option value="regular">Regular<\/option>/);
 });
+
+test('PDF and print separators are at least one typographic point', async () => {
+  const css = await source('../app/globals.css');
+  const printCss = css.slice(css.indexOf('@media print'));
+  assert.match(printCss, /\.solution-stage-tableaux \{[^}]*border: 1pt solid #777;/s);
+  assert.match(printCss, /border-right: 1pt solid #777 !important; border-bottom: 1pt solid #777 !important;/);
+  assert.match(printCss, /\.tableau-grid \.sticky-left \{ border-right-width: 1\.5pt !important; \}/);
+  assert.doesNotMatch(printCss, /border-(?:right|bottom|top): 1px solid #777/);
+});
