@@ -233,9 +233,11 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 3px s
 .control-tooltip::before { content: ""; position: absolute; left: 22px; top: -5px; width: 8px; height: 8px; border-left: 1px solid color-mix(in srgb, var(--brand) 35%, var(--line)); border-top: 1px solid color-mix(in srgb, var(--brand) 35%, var(--line)); background: var(--surface-raised); transform: rotate(45deg); }
 .disabled-edit-tip.visible:hover .control-tooltip, .disabled-edit-tip.visible:focus-within .control-tooltip { opacity: 1; visibility: visible; transform: translateY(0); }
 .compact-control button { min-width: 60px; height: 32px; padding: 0 10px; display: grid; place-items: center; }
-.display-fraction-sample { display: inline; white-space: nowrap; line-height: 1; }
+.display-fraction-sample { position: relative; display: inline-block; white-space: pre; word-spacing: .17em; line-height: 1; }
 /* Firefox's extreme page zoom has repeatedly exposed disappearing glyphs when
-   this sample is split into children. It intentionally remains one text run. */
+   the two digits are split into children. They therefore remain one text run;
+   only the decorative slash is lifted independently for optical centring. */
+.display-fraction-sample::after { content: "/"; position: absolute; inset: 0; display: grid; place-items: center; word-spacing: normal; transform: translateY(-.085em); }
 .count-pill { min-width: 19px; height: 19px; border-radius: 10px; display: grid; place-items: center; padding: 0 5px; background: var(--surface-muted); font-size: .74rem; }
 .command-divider { height: 26px; width: 1px; background: var(--line); flex: 0 0 auto; }
 .command-spacer { flex: 1 1 auto; }
@@ -319,7 +321,10 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 3px s
 /* Meet the pointer directly under the marker so the hint reads as an
    explanation of the dot/sign rather than of the whole variable header. */
 .variable-kind-tooltip { top: 21px; left: -3px; width: max-content; min-width: 0; max-width: 240px; text-align: left; transition-delay: 0s; }
-.variable-kind-tooltip::before { left: 10px; }
+/* The rotated 8px pointer is positioned by its centre, not its left edge. Its
+   apex now lands exactly on the centre of the 7px original/slack marker. */
+.variable-kind-tooltip::before { left: 10.5px; }
+.variable-split-positive .variable-kind-tooltip::before, .variable-split-negative .variable-kind-tooltip::before { left: 11.5px; }
 /* Hover waits long enough to avoid flashing while the pointer crosses columns;
    keyboard focus and an intentional touch tap disclose the hint immediately. */
 .variable-header:hover > .variable-kind-tooltip { opacity: 1; visibility: visible; transform: translateY(0); transition-delay: .35s; }
@@ -338,7 +343,7 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 3px s
 .hovered-pivot-cell { z-index: 12; }
 .selected-pivot { z-index: 2; background: var(--accent-soft) !important; }
 .selected-pivot::after, .historic-pivot::after { content: ""; position: absolute; inset: 13% 10%; border: 2px solid var(--accent); border-radius: 50%; pointer-events: none; transform: rotate(-5deg); z-index: 3; }
-.minimum-ratio::before { content: ""; position: absolute; top: 8px; right: 8px; width: 6px; height: 6px; border-radius: 50%; background: var(--brand); z-index: 4; }
+.minimum-ratio::before, .maximum-ratio::before { content: ""; position: absolute; top: 8px; right: 8px; width: 6px; height: 6px; border-radius: 50%; background: var(--brand); z-index: 4; }
 .recommended-ratio { color: var(--brand); font-weight: 750; }
 .not-eligible { color: var(--faint); }
 /* Both active and completed cells use the same full-cell centering slot. This
@@ -346,14 +351,17 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 3px s
    when a pivot appends a new step. */
 .tableau-number-slot { position: absolute; inset: 0; display: grid; place-items: center; }
 /* The magnitude owns the central track. Equal sign and balance tracks keep all
-   magnitudes aligned without taking the minus out of normal layout. */
-.number-value { display: inline-grid; grid-template-columns: .82em auto .82em; align-items: center; justify-items: stretch; line-height: 1; vertical-align: middle; }
+   magnitudes aligned. The minus is a rule rather than a font glyph: this keeps
+   its gap fixed and puts it on exactly the same axis and weight as a fraction
+   bar at every font size and browser zoom. */
+.number-value { --math-rule-width: 1.25px; display: inline-grid; grid-template-columns: .58em auto .58em; column-gap: .08em; align-items: center; justify-items: stretch; line-height: 1; vertical-align: middle; }
 .number-value::after { content: ""; grid-column: 3; }
-.number-sign { grid-column: 1; justify-self: end; align-self: center; line-height: 1; }
+.number-sign { grid-column: 1; width: .58em; height: var(--math-rule-width); justify-self: end; align-self: center; }
+.number-sign.negative { background: currentColor; }
 .number-magnitude { grid-column: 2; display: inline-flex; align-items: center; justify-content: center; }
 .fraction-value { align-items: center; }
-.fraction-stack { display: inline-grid; grid-template-rows: 1em 1.3px 1em; align-items: center; justify-items: stretch; line-height: 1; min-width: 1.35em; font-size: .8em; }
-.fraction-stack::after { content: ""; grid-row: 2; width: 100%; border-top: 1.3px solid currentColor; }
+.fraction-stack { display: inline-grid; grid-template-rows: 1em var(--math-rule-width) 1em; align-items: center; justify-items: stretch; line-height: 1; min-width: 1.35em; font-size: .8em; }
+.fraction-stack::after { content: ""; grid-row: 2; width: 100%; height: var(--math-rule-width); background: currentColor; }
 .fraction-stack > span { display: flex; align-items: center; justify-content: center; padding: 0 .16em; }
 .fraction-stack > span:first-child { grid-row: 1; align-self: end; padding-bottom: .08em; }
 .fraction-stack > span:last-child { grid-row: 3; align-self: start; padding-top: .08em; }

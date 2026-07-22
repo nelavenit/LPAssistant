@@ -4,14 +4,15 @@ import test from 'node:test';
 
 const source = async (path) => readFile(new URL(path, import.meta.url), 'utf8');
 
-test('the display selector is one native text run at extreme Firefox zoom', async () => {
+test('the display selector keeps both digits in one native text run at extreme Firefox zoom', async () => {
   const [app, css] = await Promise.all([
     source('../app/pivotlab/App.tsx'),
     source('../app/globals.css'),
   ]);
-  assert.match(app, /className="display-fraction-sample"[^>]*>1\/2<\/span>/);
+  assert.match(app, /className="display-fraction-sample"[^>]*>1 2<\/span>/);
   assert.doesNotMatch(app, /display-fraction-slash|<span>1<\/span>|<span>2<\/span>/);
-  assert.match(css, /\.display-fraction-sample \{[^}]*display: inline;[^}]*white-space: nowrap;/s);
+  assert.match(css, /\.display-fraction-sample \{[^}]*display: inline-block;[^}]*white-space: pre;/s);
+  assert.match(css, /\.display-fraction-sample::after \{[^}]*content: "\/";[^}]*translateY\(-\.085em\);/s);
   assert.doesNotMatch(css, /\.display-fraction-sample \{[^}]*inline-flex/s);
   assert.doesNotMatch(css, /\.display-fraction-slash/);
 });
@@ -135,19 +136,23 @@ test('navigation and history call entries pivoting steps, not tableaux', async (
   assert.doesNotMatch([app, settings, history, modal].join('\n'), /previous tableau|next tableau|every tableau through/i);
 });
 
-test('minus signs use balanced normal-flow tracks around the common magnitude axis', async () => {
+test('minus signs and fraction bars share one centred rule geometry', async () => {
   const [numberValue, css, graphic] = await Promise.all([
     source('../app/pivotlab/components/NumberValue.tsx'),
     source('../app/globals.css'),
     source('../app/pivotlab/export/tableauGraphic.ts'),
   ]);
-  assert.match(numberValue, /className="number-sign"/);
+  assert.match(numberValue, /number-sign\$\{negative \? ' negative' : ''\}/);
   assert.match(numberValue, /className="number-magnitude fraction-stack"/);
-  assert.match(css, /\.number-value \{[^}]*display: inline-grid;[^}]*grid-template-columns: \.82em auto \.82em;/s);
-  assert.match(css, /\.number-sign \{[^}]*grid-column: 1;[^}]*align-self: center;/s);
+  assert.match(css, /\.number-value \{[^}]*--math-rule-width: 1\.25px;[^}]*grid-template-columns: \.58em auto \.58em;[^}]*column-gap: \.08em;/s);
+  assert.match(css, /\.number-sign \{[^}]*height: var\(--math-rule-width\);[^}]*align-self: center;/s);
+  assert.match(css, /\.number-sign\.negative \{ background: currentColor; \}/);
+  assert.match(css, /\.fraction-stack::after \{[^}]*height: var\(--math-rule-width\);[^}]*background: currentColor;/s);
   assert.doesNotMatch(css, /\.number-sign \{[^}]*position: absolute/s);
   assert.match(graphic, /const fractionX = x;/);
   assert.match(graphic, /signedTextLabel\(formatRational\(value, display\), x, y, bold, 18\)/);
+  assert.match(graphic, /const signWidth = size \* \.42;/);
+  assert.match(graphic, /stroke-width="1\.2"/);
   assert.doesNotMatch(numberValue, /fraction-sign/);
 });
 
@@ -189,14 +194,22 @@ test('variable markers explain themselves on delayed hover, focus, and touch', a
 });
 
 test('pivot guidance leaves ratio calculation to the inspector', async () => {
-  const [grid, modal, css] = await Promise.all([
+  const [grid, inspector, tableau, modal, css] = await Promise.all([
     source('../app/pivotlab/components/TableauGrid.tsx'),
+    source('../app/pivotlab/components/Inspector.tsx'),
+    source('../app/pivotlab/model/tableau.ts'),
     source('../app/pivotlab/components/Modals.tsx'),
     source('../app/globals.css'),
   ]);
   assert.doesNotMatch(grid, /pivot-ratio-tooltip/);
   assert.doesNotMatch(css, /\.pivot-ratio-tooltip/);
   assert.match(modal, /Exact ratios remain available in the pivot inspector/);
+  assert.match(tableau, /export function maximumEligibleColumn/);
+  assert.match(grid, /algorithm === 'dual'[\s\S]*maximumEligibleColumn/);
+  assert.match(grid, /maximumColumn === columnIndex[\s\S]*'maximum-ratio'/);
+  assert.match(inspector, /<>c<sub>\{columnIndex \+ 1\}<\/sub><\/>/);
+  assert.match(inspector, /algorithm === 'primal' \? 'minimum' : 'maximum'/);
+  assert.match(inspector, /showPivotHints && algorithm === 'dual' && !dualEligible/);
 });
 
 test('the larger no-artificial-variable example is the new default', async () => {
@@ -228,9 +241,9 @@ test('the new-tableau dialog renders the curated example library', async () => {
   assert.match(css, /\.example-library \{[^}]*grid-template-columns: repeat\(2,/s);
 });
 
-test('README documents the substantive 0.9.1 capabilities without visual trivia', async () => {
+test('README documents the substantive 0.9.2 capabilities without visual trivia', async () => {
   const readme = await source('../README.md');
-  assert.match(readme, /Simplex Assistant 0\.9\.1/);
+  assert.match(readme, /Simplex Assistant 0\.9\.2/);
   assert.match(readme, /unrestricted-variable splitting/);
   assert.match(readme, /curated example library/);
   assert.doesNotMatch(readme, /colored variable|green dot|tooltip delay/i);

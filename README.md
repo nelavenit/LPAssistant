@@ -4,7 +4,7 @@ LPAssistant is an open-ended umbrella project for interactive linear-programming
 
 **Live application:** [Simplex Assistant](https://pivotlab-simplex.valbor2002.chatgpt.site)
 
-## Simplex Assistant 0.9.1
+## Simplex Assistant 0.9.2
 
 Simplex Assistant is deliberately not an automatic solver. The user is able to choose any nonzero pivot; the application performs exactly one pivot transformation and records the resulting tableau.
 

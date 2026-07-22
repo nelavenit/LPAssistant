@@ -15,7 +15,7 @@ test('the 0.7.1 scrolling, explanations, and control fixes remain available', as
     source('../scripts/install-ci.sh'),
     source('../scripts/validate-artifact.sh'),
   ]);
-  assert.match(app, /className="display-fraction-sample"[^>]*>1\/2<\/span>/);
+  assert.match(app, /className="display-fraction-sample"[^>]*>1 2<\/span>/);
   assert.doesNotMatch(app, /<span>1<\/span>|<span>2<\/span>/);
   assert.match(app, /className=\{`decimal-places-slot/);
   assert.match(css, /\.decimal-places-slot \{[^}]*width: 142px;[^}]*visibility: hidden;/s);

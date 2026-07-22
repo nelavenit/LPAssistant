@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { NumberDisplay } from '../math/rational';
 import type { Algorithm, AppMode, PivotRecord, PivotSelection, Tableau, VariableKind } from '../model/tableau';
-import { cloneTableau, minimumEligibleRow } from '../model/tableau';
+import { cloneTableau, maximumEligibleColumn, minimumEligibleRow } from '../model/tableau';
 import { CellInput } from './CellInput';
 import { ChevronIcon, TrashIcon } from './Icons';
 import { NumberValue } from './NumberValue';
@@ -55,8 +55,14 @@ export function TableauGrid({
   const selectedColumn = selection
     ? tableau.variables.findIndex((variable) => variable.id === selection.variableId)
     : -1;
+  const selectedRow = selection
+    ? tableau.rows.findIndex((row) => row.id === selection.rowId)
+    : -1;
   const minimumRow = showPivotHints && selectedColumn >= 0 && algorithm === 'primal'
     ? minimumEligibleRow(tableau, selectedColumn)
+    : null;
+  const maximumColumn = showPivotHints && selectedRow >= 0 && algorithm === 'dual'
+    ? maximumEligibleColumn(tableau, selectedRow)
     : null;
   const editable = mode === 'edit' && Boolean(onChange) && !compact;
   const variableWidth = Math.max(82, Math.min(148, Math.round(tableFontSize * 5.1)));
@@ -212,6 +218,7 @@ export function TableauGrid({
                     hovered?.column === columnIndex ? 'column-hover' : '',
                     selectedColumn === columnIndex ? 'selected-column' : '',
                     minimumRow === rowIndex && selectedColumn === columnIndex ? 'minimum-ratio' : '',
+                    maximumColumn === columnIndex && selectedRow === rowIndex ? 'maximum-ratio' : '',
                     isHoveredCell ? 'hovered-pivot-cell' : '',
                   ].filter(Boolean).join(' ');
                   return (

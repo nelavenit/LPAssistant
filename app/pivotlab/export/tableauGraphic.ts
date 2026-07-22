@@ -315,10 +315,13 @@ function signedTextLabel(value: string, x: number, y: number, bold = false, size
   if (!value.startsWith('-')) return textLabel(value, x, y, bold, size);
   const magnitude = value.slice(1);
   const estimatedMagnitudeWidth = Math.max(size * .55, magnitude.length * size * .56);
-  const signX = x - estimatedMagnitudeWidth / 2 - size * .12;
-  const weight = bold ? 700 : 500;
+  const signRight = x - estimatedMagnitudeWidth / 2 - size * .1;
+  const signWidth = size * .42;
+  // Exported integers use the same centred rule as exported fractions. A
+  // text-glyph minus has font-dependent bearings and no guaranteed relation to
+  // the fraction bar, which recreates the UI alignment bug in SVG/PNG output.
   return [
-    `<text x="${signX}" y="${y}" text-anchor="end" dominant-baseline="middle" ${textPaint()} font-size="${size}" font-weight="${weight}">−</text>`,
+    `<line x1="${signRight - signWidth}" y1="${y}" x2="${signRight}" y2="${y}" stroke="${INK}" stroke-opacity="1" stroke-width="1.2"/>`,
     textLabel(magnitude, x, y, bold, size),
   ].join('');
 }

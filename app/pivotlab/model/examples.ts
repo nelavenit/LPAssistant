@@ -144,35 +144,39 @@ export const exampleProblems: ExampleProblem[] = [
   },
   {
     id: 'dual-easier',
-    title: 'Dual is easier · 5 constraints, 2 originals',
-    description: 'The dual has only 2 constraints instead of the primal’s 5',
+    title: 'Dual is easier · Phase I vs immediate basis',
+    description: 'Primal: 3 × 8 during Phase I · dual: 2 × 5 with an immediate basis',
     create: () => createExampleTableau({
-      title: 'Dual is easier · 5 constraints, 2 originals',
-      kinds: [...regular(2), ...slack(5)],
-      basis: [2, 3, 4, 5, 6],
+      title: 'Dual is easier · Phase I vs immediate basis',
+      // min x1 + 4x2 subject to three >= constraints. Its three surplus
+      // columns do not provide a starting basis, so Phase I expands this
+      // 3-by-5 input to 3-by-8; the dual below starts as only 2-by-5.
+      kinds: [...regular(2), ...slack(3)],
+      basis: [null, null, null],
       rows: [
-        ['1', '1', '1', '0', '0', '0', '0', '6'],
-        ['2', '1', '0', '1', '0', '0', '0', '10'],
-        ['1', '3', '0', '0', '1', '0', '0', '12'],
-        ['3', '2', '0', '0', '0', '1', '0', '18'],
-        ['1', '0', '0', '0', '0', '0', '1', '4'],
+        ['1', '1', '-1', '0', '0', '3'],
+        ['1', '2', '0', '-1', '0', '5'],
+        ['1', '3', '0', '0', '-1', '6'],
       ],
-      objective: ['-4', '-3', '0', '0', '0', '0', '0', '0'],
+      objective: ['1', '4', '0', '0', '0', '0'],
     }),
   },
   {
     id: 'dual-harder',
-    title: 'Dual is harder · 2 constraints, 5 originals',
-    description: 'The primal has only 2 constraints; its dual would have 5',
+    title: 'Dual is harder · Immediate basis vs Phase I',
+    description: 'Initial: 2 × 5 with an immediate basis · dual: 3 × 8 during Phase I',
     create: () => createExampleTableau({
-      title: 'Dual is harder · 2 constraints, 5 originals',
-      kinds: [...regular(5), ...slack(2)],
-      basis: [5, 6],
+      title: 'Dual is harder · Immediate basis vs Phase I',
+      // This is exactly the dual of the previous example. It has three
+      // original plus two slack variables and needs no artificial variables;
+      // dualising it returns the three-row Phase I problem above.
+      kinds: [...regular(3), ...slack(2)],
+      basis: [3, 4],
       rows: [
-        ['1', '2', '0', '1', '3', '1', '0', '20'],
-        ['2', '0', '1', '3', '1', '0', '1', '18'],
+        ['1', '1', '1', '1', '0', '1'],
+        ['1', '2', '3', '0', '1', '4'],
       ],
-      objective: ['-5', '-4', '-3', '-2', '-1', '0', '0', '0'],
+      objective: ['-3', '-5', '-6', '0', '0', '0'],
     }),
   },
   {

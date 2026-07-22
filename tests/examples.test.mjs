@@ -95,11 +95,15 @@ test('dual-size and split-variable examples encode their advertised structures',
   assert.deepEqual([
     dualEasier.rows.length,
     dualEasier.variables.filter((variable) => variable.kind === 'regular').length,
-  ], [5, 2]);
+    dualEasier.variables.length,
+    dualEasier.rows.filter((row) => row.basisId === null).length,
+  ], [3, 2, 5, 3]);
   assert.deepEqual([
     dualHarder.rows.length,
     dualHarder.variables.filter((variable) => variable.kind === 'regular').length,
-  ], [2, 5]);
+    dualHarder.variables.length,
+    dualHarder.rows.filter((row) => row.basisId !== null).length,
+  ], [2, 3, 5, 2]);
   assert.deepEqual(load('unrestricted-split').variables.slice(0, 2).map((variable) => variable.kind), [
     'split-positive',
     'split-negative',

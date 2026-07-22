@@ -51,7 +51,7 @@ import { TableauGrid } from './components/TableauGrid';
 
 type View = 'workspace' | 'history';
 type ModalName = 'new' | 'phase1' | 'settings' | 'export' | null;
-const DEFAULT_EXAMPLE_VERSION = '0.9.1-larger-no-artificial-variables';
+const DEFAULT_EXAMPLE_VERSION = '0.9.2-larger-no-artificial-variables';
 
 interface InstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -443,9 +443,11 @@ export default function App() {
           <span>Display</span>
           <div className="segmented-control compact-control">
             <button type="button" className={numberMode === 'fraction' ? 'active' : ''} onClick={() => setDisplay({ mode: 'fraction' })}>
-              {/* Keep 1/2 as one native text run. Splitting or transforming any
-                  glyph makes Firefox drop the leading 1 at extreme page zoom. */}
-              <span className="display-fraction-sample" aria-label="Fractions">1/2</span>
+              {/* Both digits stay in one native text node because Firefox can
+                  omit a separately laid-out first glyph at extreme page zoom.
+                  The optical slash is a pseudo-element, so it can be centred
+                  without returning either digit to that fragile layout. */}
+              <span className="display-fraction-sample" aria-label="Fractions">1 2</span>
             </button>
             <button type="button" className={numberMode === 'decimal' ? 'active' : ''} onClick={() => setDisplay({ mode: 'decimal', precision: display.mode === 'decimal' ? display.precision : 3 })}>0.50</button>
           </div>

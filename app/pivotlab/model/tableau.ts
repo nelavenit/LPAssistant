@@ -186,6 +186,33 @@ export function minimumEligibleRow(tableau: Tableau, columnIndex: number): numbe
   return minimumIndex;
 }
 
+export function dualEligibleRatios(tableau: Tableau, rowIndex: number): Array<Rational | null> {
+  const row = tableau.rows[rowIndex];
+  if (!row) return Array.from({ length: tableau.variables.length }, () => null);
+  const rhs = row.values[tableau.variables.length];
+  // With the displayed c_j / a_i,j convention, a dual-simplex candidate has
+  // negative RHS, negative row coefficient, and nonnegative reduced cost.
+  // Its ratio is therefore nonpositive, and the largest ratio is the usual
+  // minimum c_j / (-a_i,j) written without hiding the sign of a_i,j.
+  if (!rhs.isNegative()) return Array.from({ length: tableau.variables.length }, () => null);
+  return tableau.variables.map((_, columnIndex) => {
+    const coefficient = row.values[columnIndex];
+    const objectiveCoefficient = tableau.objective[columnIndex];
+    if (!coefficient.isNegative() || objectiveCoefficient.isNegative()) return null;
+    return objectiveCoefficient.div(coefficient);
+  });
+}
+
+export function maximumEligibleColumn(tableau: Tableau, rowIndex: number): number | null {
+  const ratios = dualEligibleRatios(tableau, rowIndex);
+  let maximumIndex: number | null = null;
+  ratios.forEach((ratio, index) => {
+    if (!ratio) return;
+    if (maximumIndex === null || ratio.compare(ratios[maximumIndex]!) > 0) maximumIndex = index;
+  });
+  return maximumIndex;
+}
+
 export function detectBasis(tableau: Tableau): Tableau {
   const next = cloneTableau(tableau);
   const claimed = new Set<string>();

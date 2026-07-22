@@ -12,7 +12,7 @@ export function NumberValue({ value, display }: NumberValueProps) {
     const negative = formatted.startsWith('-');
     return (
       <span className="number-value integer-value" aria-label={formatted}>
-        <span className="number-sign" aria-hidden="true">{negative ? '−' : ''}</span>
+        <span className={`number-sign${negative ? ' negative' : ''}`} aria-hidden="true" />
         <span className="number-magnitude">{negative ? formatted.slice(1) : formatted}</span>
       </span>
     );
@@ -21,7 +21,7 @@ export function NumberValue({ value, display }: NumberValueProps) {
   const numerator = negative ? -value.numerator : value.numerator;
   return (
     <span className="number-value fraction-value" aria-label={value.toFraction()}>
-      <span className="number-sign" aria-hidden="true">{negative ? '−' : ''}</span>
+      <span className={`number-sign${negative ? ' negative' : ''}`} aria-hidden="true" />
       <span className="number-magnitude fraction-stack">
         <span>{numerator.toString()}</span>
         <span>{value.denominator.toString()}</span>
