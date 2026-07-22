@@ -199,6 +199,16 @@ export default function App() {
     setMode('edit');
   };
 
+  const renameProblem = (title: string) => {
+    // The title is project metadata, not tableau algebra. Renaming therefore
+    // propagates through every pivot and edit snapshot without discarding work.
+    setHistory((previous) => previous.map((entry) => ({
+      ...entry,
+      tableau: { ...entry.tableau, title },
+    })));
+    setEditHistory((previous) => previous.map((tableau) => ({ ...tableau, title })));
+  };
+
   const safely = (operation: () => void) => {
     try { operation(); } catch (caught) { showNotice(caught instanceof Error ? caught.message : 'The operation could not be completed.'); }
   };
@@ -372,16 +382,11 @@ export default function App() {
           <div><strong>Simplex Assistant</strong><span>Manual pivot practice</span></div>
         </div>
         <div className="document-title">
-          {mode === 'edit' ? (
-            <input
-              value={current.title}
-              aria-label="Tableau title"
-              onChange={(event) => {
-                const next = { ...current, title: event.target.value };
-                replaceCurrent(next);
-              }}
-            />
-          ) : <strong>{current.title}</strong>}
+          <input
+            value={current.title}
+            aria-label="Problem name"
+            onChange={(event) => renameProblem(event.target.value)}
+          />
           <span>saved locally</span>
         </div>
         <div className="topbar-actions">

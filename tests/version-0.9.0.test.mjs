@@ -29,3 +29,12 @@ test('fractions keep one vertical anchor in active and completed steps', async (
   assert.match(css, /\.tableau-grid th, \.tableau-grid td \{[^}]*vertical-align: middle;/s);
   assert.match(css, /\.number-value \{[^}]*vertical-align: middle;/s);
 });
+
+test('problem names remain editable without invalidating pivot history', async () => {
+  const app = await source('../app/pivotlab/App.tsx');
+  assert.match(app, /const renameProblem = \(title: string\) => \{/);
+  assert.match(app, /setHistory\(\(previous\) => previous\.map/);
+  assert.match(app, /aria-label="Problem name"/);
+  assert.match(app, /onChange=\{\(event\) => renameProblem\(event\.target\.value\)\}/);
+  assert.doesNotMatch(app, /aria-label="Tableau title"/);
+});
