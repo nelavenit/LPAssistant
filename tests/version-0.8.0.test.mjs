@@ -162,12 +162,12 @@ test('light and dark theme tokens, inspector art, controls, and print frames ret
     readFile(new URL('../README.md', import.meta.url), 'utf8'),
   ]);
 
-  assert.match(app, /<span className="display-fraction-sample" aria-label="Fractions">1\/2<\/span>/);
-  assert.doesNotMatch(app, /display-fraction-slash/);
+  assert.match(app, /<span className="display-fraction-sample" aria-label="Fractions">1 2<\/span>/);
+  assert.doesNotMatch(css, /\.display-fraction-slash/);
   assert.match(variableName, /className="variable-name"/);
   assert.match(inspector, /var\(--pivot-icon-field\)/);
   assert.match(inspector, /M140 110v16/);
-  assert.match(css, /:root\[data-theme="dark"\][\s\S]*--bg: #111111;[\s\S]*--brand: #e7e7e7;/);
+  assert.match(css, /:root\[data-theme="dark"\][\s\S]*--bg: #111111;[\s\S]*--brand: #3fb950;/);
   assert.doesNotMatch(css.match(/:root\[data-theme="dark"\] \{([\s\S]*?)\n\}/)?.[1] ?? '', /#(?:63c3a1|193c30|304039|485c52)/i);
   assert.ok(contrast('#111111', '#f2f2f2') > 15);
   assert.doesNotMatch(grid, /row-actions-cell|row-actions-column/);
@@ -176,12 +176,12 @@ test('light and dark theme tokens, inspector art, controls, and print frames ret
   assert.match(modal, /Restore appearance defaults/);
   assert.match(modal, /Restore shortcut defaults/);
   assert.doesNotMatch(modal, /eyebrow="Start fresh"/);
-  assert.match(css, /\.solution-stage-tableaux \{ display: block; border: 1px solid #777;/);
-  assert.match(css, /height: 7\.5mm; padding: 1\.2mm;/);
+  assert.match(css, /\.solution-stage-tableaux \{ display: block; border: 1\.5pt solid #777;/);
+  assert.match(css, /height: 5\.4mm; padding: \.65mm;/);
   assert.doesNotMatch(readme, /clearly named|tableau-only scrolling|persistent Pivot Inspector/i);
 });
 
-test('release metadata and offline cache identify version 0.8.0', async () => {
+test('release metadata and offline cache identify version 0.9.3', async () => {
   const [pkg, lock, readme, modal, worker] = await Promise.all([
     readFile(new URL('../package.json', import.meta.url), 'utf8'),
     readFile(new URL('../package-lock.json', import.meta.url), 'utf8'),
@@ -189,11 +189,11 @@ test('release metadata and offline cache identify version 0.8.0', async () => {
     readFile(new URL('../app/pivotlab/components/Modals.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../public/sw.js', import.meta.url), 'utf8'),
   ]);
-  assert.match(pkg, /"version": "0\.8\.0"/);
-  assert.match(lock, /"version": "0\.8\.0"/);
-  assert.match(readme, /Simplex Assistant 0\.8\.0/);
-  assert.match(modal, /Simplex Assistant 0\.8\.0/);
-  assert.match(worker, /simplex-assistant-shell-v12/);
+  assert.match(pkg, /"version": "0\.9\.3"/);
+  assert.match(lock, /"version": "0\.9\.3"/);
+  assert.match(readme, /Simplex Assistant 0\.9\.3/);
+  assert.match(modal, /Simplex Assistant 0\.9\.3/);
+  assert.match(worker, /simplex-assistant-shell-v16/);
 });
 
 function contrast(first, second) {

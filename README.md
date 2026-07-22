@@ -4,7 +4,7 @@ LPAssistant is an open-ended umbrella project for interactive linear-programming
 
 **Live application:** [Simplex Assistant](https://pivotlab-simplex.valbor2002.chatgpt.site)
 
-## Simplex Assistant 0.8.0
+## Simplex Assistant 0.9.3
 
 Simplex Assistant is deliberately not an automatic solver. The user is able to choose any nonzero pivot; the application performs exactly one pivot transformation and records the resulting tableau.
 
@@ -12,6 +12,7 @@ Simplex Assistant is deliberately not an automatic solver. The user is able to c
 
 - arbitrary numbers of constraint rows and variable columns;
 - direct editing of the initial tableau's coefficients, RHS values, variable names, variable types, and basis, with spreadsheet-style arrow-key navigation;
+- unrestricted-variable splitting with distinct positive and negative parts;
 - exact arbitrary-precision rational arithmetic;
 - integer, decimal, scientific-notation, and rational-fraction input;
 - exact fraction or configurable decimal display;
@@ -21,6 +22,7 @@ Simplex Assistant is deliberately not an automatic solver. The user is able to c
 - a Simplex Method Tableau with separate Initial problem, Phase I, and Phase II groups when artificial variables change its columns;
 - marked pivots plus undo and redo for tableau editing and pivot steps;
 - project save/open, local autosave, and locally stored previous-problem history;
+- a curated example library covering Phase I, cycling, pivot-rule comparisons, primal/dual size tradeoffs, degeneracy, alternate optima, unboundedness, and infeasibility;
 - LaTeX, Markdown, CSV, PDF, PNG, transparent PNG, and SVG export for either the initial problem or the complete solution;
 - remappable keyboard shortcuts, responsive scaling, and light/dark themes;
 - installable, offline-ready PWA behavior.

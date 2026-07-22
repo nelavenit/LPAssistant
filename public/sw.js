@@ -1,4 +1,4 @@
-const CACHE = 'simplex-assistant-shell-v12';
+const CACHE = 'simplex-assistant-shell-v16';
 const CORE = ['./', 'manifest.webmanifest', 'icon.svg']
   .map((path) => new URL(path, self.registration.scope).href);
 

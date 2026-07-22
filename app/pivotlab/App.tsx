@@ -7,7 +7,6 @@ import {
   addConstraint,
   addVariable,
   createBlankTableau,
-  createTextbookExample,
   detectBasis,
   finishPhaseOne,
   makeId,
@@ -23,6 +22,8 @@ import {
 } from './model/tableau';
 import { deserializeProject, serializeProject } from './model/project';
 import { groupTableauStages } from './model/stages';
+import { createExampleProblem } from './model/examples';
+import { safeFileName } from './export/naming';
 import {
   createProblemHistoryRecord,
   loadProblemHistory,
@@ -50,7 +51,7 @@ import { TableauGrid } from './components/TableauGrid';
 
 type View = 'workspace' | 'history';
 type ModalName = 'new' | 'phase1' | 'settings' | 'export' | null;
-const DEFAULT_EXAMPLE_VERSION = '7.4.1';
+const DEFAULT_EXAMPLE_VERSION = '0.9.2-larger-no-artificial-variables';
 
 interface InstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -64,24 +65,32 @@ function initialSession(): { history: HistoryEntry[]; currentIndex: number } {
       const loaded = deserializeProject(stored);
       const defaultVersion = localStorage.getItem('pivotlab-default-example-version');
       localStorage.setItem('pivotlab-default-example-version', DEFAULT_EXAMPLE_VERSION);
-      if (defaultVersion === DEFAULT_EXAMPLE_VERSION || !isLegacyTextbookSession(loaded)) return loaded;
+      if (defaultVersion === DEFAULT_EXAMPLE_VERSION || !isLegacyDefaultSession(loaded)) return loaded;
     }
   } catch {
     // A clean example is safer than blocking startup on a damaged autosave.
   }
-  const tableau = createTextbookExample();
+  const tableau = createExampleProblem('large-no-phase-one');
   return {
     history: [{ id: makeId('history'), label: 'Initial tableau', tableau }],
     currentIndex: 0,
   };
 }
 
-function isLegacyTextbookSession(session: { history: HistoryEntry[] }): boolean {
+function isLegacyDefaultSession(session: { history: HistoryEntry[] }): boolean {
   const tableau = session.history[0]?.tableau;
-  if (!tableau || tableau.title !== 'Example 3.6.1' || tableau.rows.length !== 2 || tableau.variables.length !== 5) return false;
-  return tableau.rows[0]?.values.map((value) => value.toFraction()).join(',') === '3,7,3,1,0,10'
-    && tableau.rows[1]?.values.map((value) => value.toFraction()).join(',') === '2,2,6,0,1,4'
-    && tableau.objective.map((value) => value.toFraction()).join(',') === '-60,-84,-72,0,0,0';
+  if (!tableau || session.history.length !== 1) return false;
+  // Replace only untouched historical defaults. Any renamed, edited, or pivoted
+  // problem is user work and must survive a change of the bundled example.
+  if (tableau.title === 'Example 3.6.1' && tableau.rows.length === 2 && tableau.variables.length === 5) {
+    return tableau.rows[0]?.values.map((value) => value.toFraction()).join(',') === '3,7,3,1,0,10'
+      && tableau.rows[1]?.values.map((value) => value.toFraction()).join(',') === '2,2,6,0,1,4'
+      && tableau.objective.map((value) => value.toFraction()).join(',') === '-60,-84,-72,0,0,0';
+  }
+  if (tableau.title !== 'Example 7.4.1' || tableau.rows.length !== 3 || tableau.variables.length !== 7) return false;
+  return tableau.rows.map((row) => row.values.map((value) => value.toFraction()).join(',')).join('|')
+      === '2,0,-1,3,1,0,0,20|0,1,-2,-1,0,1,0,30|-3,6,3,4,0,0,1,24'
+    && tableau.objective.map((value) => value.toFraction()).join(',') === '5,-18,-6,1,0,0,0,0';
 }
 
 function initialDisplay(): NumberDisplay {
@@ -199,6 +208,16 @@ export default function App() {
     setMode('edit');
   };
 
+  const renameProblem = (title: string) => {
+    // The title is project metadata, not tableau algebra. Renaming therefore
+    // propagates through every pivot and edit snapshot without discarding work.
+    setHistory((previous) => previous.map((entry) => ({
+      ...entry,
+      tableau: { ...entry.tableau, title },
+    })));
+    setEditHistory((previous) => previous.map((tableau) => ({ ...tableau, title })));
+  };
+
   const safely = (operation: () => void) => {
     try { operation(); } catch (caught) { showNotice(caught instanceof Error ? caught.message : 'The operation could not be completed.'); }
   };
@@ -255,7 +274,7 @@ export default function App() {
   };
 
   const saveProject = () => {
-    downloadText(`${safeName(current.title)}.simplex-assistant.json`, serializeProject(history, currentIndex));
+    downloadText(`${safeFileName(current.title)}.simplex-assistant.json`, serializeProject(history, currentIndex));
     showNotice('Project saved.');
   };
 
@@ -372,16 +391,11 @@ export default function App() {
           <div><strong>Simplex Assistant</strong><span>Manual pivot practice</span></div>
         </div>
         <div className="document-title">
-          {mode === 'edit' ? (
-            <input
-              value={current.title}
-              aria-label="Tableau title"
-              onChange={(event) => {
-                const next = { ...current, title: event.target.value };
-                replaceCurrent(next);
-              }}
-            />
-          ) : <strong>{current.title}</strong>}
+          <input
+            value={current.title}
+            aria-label="Problem name"
+            onChange={(event) => renameProblem(event.target.value)}
+          />
           <span>saved locally</span>
         </div>
         <div className="topbar-actions">
@@ -429,7 +443,11 @@ export default function App() {
           <span>Display</span>
           <div className="segmented-control compact-control">
             <button type="button" className={numberMode === 'fraction' ? 'active' : ''} onClick={() => setDisplay({ mode: 'fraction' })}>
-              <span className="display-fraction-sample" aria-label="Fractions">1/2</span>
+              {/* Both digits stay in one native text node because Firefox can
+                  omit a separately laid-out first glyph at extreme page zoom.
+                  The optical slash is a pseudo-element, so it can be centred
+                  without returning either digit to that fragile layout. */}
+              <span className="display-fraction-sample" aria-label="Fractions">1 2</span>
             </button>
             <button type="button" className={numberMode === 'decimal' ? 'active' : ''} onClick={() => setDisplay({ mode: 'decimal', precision: display.mode === 'decimal' ? display.precision : 3 })}>0.50</button>
           </div>
@@ -440,9 +458,9 @@ export default function App() {
           </span>
         </div>
         <div className="undo-controls">
-          <button className="icon-button" type="button" disabled={mode === 'edit' ? editIndex === 0 : currentIndex === 0} onClick={previousStep} title={`${mode === 'edit' ? 'Undo edit' : 'Previous tableau'} · ${settings.shortcuts.undo}`}><UndoIcon /></button>
+          <button className="icon-button" type="button" disabled={mode === 'edit' ? editIndex === 0 : currentIndex === 0} onClick={previousStep} title={`${mode === 'edit' ? 'Undo edit' : 'Previous pivoting step'} · ${settings.shortcuts.undo}`}><UndoIcon /></button>
           <span>{mode === 'edit' ? `${editIndex + 1} / ${editHistory.length}` : `${currentIndex + 1} / ${history.length}`}</span>
-          <button className="icon-button" type="button" disabled={mode === 'edit' ? editIndex === editHistory.length - 1 : currentIndex === history.length - 1} onClick={nextStep} title={`${mode === 'edit' ? 'Redo edit' : 'Next tableau'} · ${settings.shortcuts.redo}`}><RedoIcon /></button>
+          <button className="icon-button" type="button" disabled={mode === 'edit' ? editIndex === editHistory.length - 1 : currentIndex === history.length - 1} onClick={nextStep} title={`${mode === 'edit' ? 'Redo edit' : 'Next pivoting step'} · ${settings.shortcuts.redo}`}><RedoIcon /></button>
         </div>
       </nav>
 
@@ -480,10 +498,7 @@ export default function App() {
           )}
           <section className="tableau-card">
             <header className="tableau-card-header">
-              <div>
-                <span className="eyebrow">Simplex method tableau</span>
-                <h1>{current.title}</h1>
-              </div>
+              <h1>Simplex Method Tableau</h1>
               <div className="tableau-meta">
                 <span>{current.rows.length} {current.rows.length === 1 ? 'constraint' : 'constraints'}, {current.variables.length} {current.variables.length === 1 ? 'variable' : 'variables'}</span>
                 {current.phase === 'phase1' && <span className="status-badge amber">Phase I · −w</span>}
@@ -555,7 +570,7 @@ export default function App() {
       {modal === 'new' && <NewProjectModal
         onClose={() => setModal(null)}
         onCreate={(rows, variables, title) => { reset(createBlankTableau(rows, variables, title)); setModal(null); }}
-        onLoadExample={() => { reset(createTextbookExample()); setModal(null); }}
+        onLoadExample={(id) => { reset(createExampleProblem(id)); setModal(null); }}
       />}
       {modal === 'phase1' && <PhaseOneModal tableau={current} onClose={() => setModal(null)} onStart={(rowIds) => safely(() => {
         const next = startPhaseOne(current, rowIds);
@@ -576,12 +591,17 @@ export default function App() {
         onIncludeSolutionChange={setIncludeExportSolution}
         onClose={() => setModal(null)}
         onNotice={showNotice}
-        onPrintHistory={(includeResult, includeSolution) => {
+        onPrintHistory={(includeResult, includeSolution, fileStem) => {
           setIncludePrintResult(includeResult);
           setPrintCompleteSolution(includeSolution);
           setIsPrinting(true);
           window.setTimeout(() => {
+            // Browsers derive the proposed PDF filename from document.title.
+            // Restore the application title as soon as the print dialog closes.
+            const applicationTitle = document.title;
+            document.title = fileStem;
             window.addEventListener('afterprint', () => {
+              document.title = applicationTitle;
               setIncludePrintResult(false);
               setIsPrinting(false);
             }, { once: true });
@@ -605,8 +625,4 @@ export default function App() {
       {notice && <div className="toast" role="status"><InfoIcon /><span>{notice}</span></div>}
     </div>
   );
-}
-
-function safeName(value: string): string {
-  return value.trim().replace(/[^a-z0-9._-]+/gi, '-').replace(/^-|-$/g, '') || 'tableau';
 }

@@ -1,6 +1,6 @@
 import type { NumberDisplay } from '../math/rational';
 import type { Algorithm, PivotSelection, Tableau } from '../model/tableau';
-import { minimumEligibleRow, ratioAt } from '../model/tableau';
+import { maximumEligibleColumn, minimumEligibleRow, ratioAt } from '../model/tableau';
 import { CheckIcon, InfoIcon, PlusIcon, SparkIcon } from './Icons';
 import { NumberValue } from './NumberValue';
 import { VariableName } from './VariableName';
@@ -97,10 +97,17 @@ export function PivotInspector({
   const value = row && columnIndex >= 0 ? row.values[columnIndex] : null;
   const ratio = row && variable ? ratioAt(tableau, rowIndex, columnIndex, algorithm) : null;
   const rhs = row ? row.values[tableau.variables.length] : null;
+  const objectiveCoefficient = columnIndex >= 0 ? tableau.objective[columnIndex] : null;
   const leaving = row ? tableau.variables.find((candidate) => candidate.id === row.basisId) : null;
   const recommendedRow = columnIndex >= 0 ? minimumEligibleRow(tableau, columnIndex) : null;
+  const recommendedColumn = rowIndex >= 0 ? maximumEligibleColumn(tableau, rowIndex) : null;
   const primalEligible = Boolean(value?.isPositive() && ratio && !ratio.isNegative());
-  const isMinimum = showPivotHints && algorithm === 'primal' && primalEligible && recommendedRow === rowIndex;
+  const dualEligible = Boolean(rhs?.isNegative() && value?.isNegative() && objectiveCoefficient && !objectiveCoefficient.isNegative());
+  const isRecommended = showPivotHints && (
+    algorithm === 'primal'
+      ? primalEligible && recommendedRow === rowIndex
+      : dualEligible && recommendedColumn === columnIndex
+  );
 
   return (
     <aside className="inspector-card pivot-inspector">
@@ -140,11 +147,11 @@ export function PivotInspector({
           <section className="ratio-formula-card">
             <div className="ratio-label">
               <span>{algorithm === 'primal' ? 'Primal ratio' : 'Dual ratio'}</span>
-              {isMinimum && <span className="status-badge green"><CheckIcon /> minimum</span>}
+              {isRecommended && <span className="status-badge green"><CheckIcon /> {algorithm === 'primal' ? 'minimum' : 'maximum'}</span>}
             </div>
             <div className="ratio-equation">
               <span className="ratio-fraction">
-                <span>{algorithm === 'primal' ? 'RHS' : 'objective coefficient'}</span>
+                <span>{algorithm === 'primal' ? 'RHS' : <>c<sub>{columnIndex + 1}</sub></>}</span>
                 <span>a<sub>{rowIndex + 1},{columnIndex + 1}</sub></span>
               </span>
               <span>=</span>
@@ -157,6 +164,9 @@ export function PivotInspector({
             </div>
             {showPivotHints && algorithm === 'primal' && !primalEligible && (
               <p className="ratio-warning">This entry is not eligible for the usual nonnegative primal ratio test.</p>
+            )}
+            {showPivotHints && algorithm === 'dual' && !dualEligible && (
+              <p className="ratio-warning">The dual ratio test requires a negative RHS and row entry with a nonnegative objective coefficient.</p>
             )}
           </section>
 

@@ -21,6 +21,8 @@
   --accent-soft: #fff0d9;
   --danger: #b64040;
   --danger-soft: #fbe9e9;
+  --variable-original: #4a9a7c;
+  --variable-slack: #8d9892;
   --pivot-icon-field: #e7f0eb;
   --pivot-icon-field-edge: #edf4f0;
   --pivot-icon-line: #b7c9c0;
@@ -51,13 +53,15 @@
   --faint: #737373;
   --line: #333333;
   --line-strong: #4a4a4a;
-  --brand: #e7e7e7;
-  --brand-hover: #ffffff;
+  --brand: #3fb950;
+  --brand-hover: #56d364;
   --brand-soft: #2a2a2a;
   --accent: #f0ad59;
   --accent-soft: #3b2d1c;
   --danger: #ee8585;
   --danger-soft: #492626;
+  --variable-original: #3fb950;
+  --variable-slack: #8b949e;
   --pivot-icon-field: #343434;
   --pivot-icon-field-edge: #242424;
   --pivot-icon-line: #777777;
@@ -82,13 +86,15 @@
     --faint: #737373;
     --line: #333333;
     --line-strong: #4a4a4a;
-    --brand: #e7e7e7;
-    --brand-hover: #ffffff;
+    --brand: #3fb950;
+    --brand-hover: #56d364;
     --brand-soft: #2a2a2a;
     --accent: #f0ad59;
     --accent-soft: #3b2d1c;
     --danger: #ee8585;
     --danger-soft: #492626;
+    --variable-original: #3fb950;
+    --variable-slack: #8b949e;
     --pivot-icon-field: #343434;
     --pivot-icon-field-edge: #242424;
     --pivot-icon-line: #777777;
@@ -227,7 +233,11 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 3px s
 .control-tooltip::before { content: ""; position: absolute; left: 22px; top: -5px; width: 8px; height: 8px; border-left: 1px solid color-mix(in srgb, var(--brand) 35%, var(--line)); border-top: 1px solid color-mix(in srgb, var(--brand) 35%, var(--line)); background: var(--surface-raised); transform: rotate(45deg); }
 .disabled-edit-tip.visible:hover .control-tooltip, .disabled-edit-tip.visible:focus-within .control-tooltip { opacity: 1; visibility: visible; transform: translateY(0); }
 .compact-control button { min-width: 60px; height: 32px; padding: 0 10px; display: grid; place-items: center; }
-.display-fraction-sample { display: inline; white-space: nowrap; line-height: 1; }
+.display-fraction-sample { position: relative; display: inline-block; white-space: pre; word-spacing: .17em; line-height: 1; }
+/* Firefox's extreme page zoom has repeatedly exposed disappearing glyphs when
+   the two digits are split into children. They therefore remain one text run;
+   only the decorative slash is lifted independently for optical centring. */
+.display-fraction-sample::after { content: "/"; position: absolute; inset: 0; display: grid; place-items: center; word-spacing: normal; transform: translateY(-.04em); }
 .count-pill { min-width: 19px; height: 19px; border-radius: 10px; display: grid; place-items: center; padding: 0 5px; background: var(--surface-muted); font-size: .74rem; }
 .command-divider { height: 26px; width: 1px; background: var(--line); flex: 0 0 auto; }
 .command-spacer { flex: 1 1 auto; }
@@ -293,7 +303,7 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 3px s
 .tableau-grid col.basis-col { width: var(--table-side-width, 90px); }
 .tableau-grid col.variable-col { width: var(--table-variable-width, 92px); }
 .tableau-grid col.rhs-col { width: var(--table-side-width, 90px); }
-.tableau-grid th, .tableau-grid td { position: relative; min-width: var(--table-variable-width, 92px); height: clamp(58px, calc(var(--table-font-size) * 3.9), 96px); padding: 7px 8px; text-align: center; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--surface); transition: background .09s ease; }
+.tableau-grid th, .tableau-grid td { position: relative; min-width: var(--table-variable-width, 92px); height: clamp(58px, calc(var(--table-font-size) * 3.9), 96px); padding: 7px 8px; text-align: center; vertical-align: middle; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--surface); transition: background .09s ease; }
 .tableau-grid thead th { height: 46px; min-height: 46px; padding: 7px 9px; position: sticky; top: 0; z-index: 6; background: var(--surface-soft); color: var(--ink-soft); font-size: var(--table-font-size); font-weight: 700; }
 .tableau-grid .basis-column, .tableau-grid .basis-cell, .tableau-grid .objective-name { min-width: var(--table-side-width, 90px); max-width: 140px; }
 .tableau-grid .rhs-column, .tableau-grid .rhs-cell, .tableau-grid .objective-rhs { min-width: var(--table-side-width, 90px); border-left: 2px solid var(--line-strong); font-weight: 700; }
@@ -304,10 +314,15 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 3px s
 .tableau-grid thead .sticky-left, .tableau-grid thead .sticky-right { z-index: 8; }
 .basis-cell, .objective-name { font-size: inherit; background: var(--surface-soft) !important; }
 .empty-basis { color: var(--faint); }
-.variable-header::before { content: ""; position: absolute; left: 9px; top: 9px; width: 5px; height: 5px; border-radius: 50%; background: var(--line-strong); }
-.variable-header.variable-slack::before { background: #4a9a7c; }
-.variable-header.variable-artificial::before { background: var(--accent); }
-:root[data-theme="dark"] .variable-header.variable-slack::before { background: #a4a4a4; }
+.variable-kind-marker { position: absolute; left: 8px; top: 8px; width: 7px; height: 7px; display: grid; place-items: center; border-radius: 50%; background: var(--variable-slack); color: var(--variable-original); font-size: 12px; font-weight: 800; line-height: 1; }
+.variable-regular .variable-kind-marker { background: var(--variable-original); }
+.variable-artificial .variable-kind-marker { background: var(--accent); }
+.variable-split-positive .variable-kind-marker, .variable-split-negative .variable-kind-marker { left: 6px; top: 5px; width: 13px; height: 13px; border-radius: 0; background: transparent; }
+/* The hint lives in a body portal: table cells can no longer crop it. Its
+   horizontal origin is the measured marker centre, so dots and both split
+   signs share exact automatic alignment rather than kind-specific offsets. */
+.variable-kind-tooltip-portal { position: fixed; z-index: 200; width: max-content; min-width: 0; max-width: min(240px, calc(100vw - 16px)); text-align: left; opacity: 1; visibility: visible; transform: translateX(-50%); transition: none; }
+.variable-kind-tooltip-portal::before { left: 50%; margin-left: -4px; }
 .tableau-grid sub { font-size: .65em; vertical-align: -.22em; }
 .variable-name { display: inline; white-space: nowrap; }
 .variable-name sub { font-size: .65em; line-height: 0; vertical-align: -.28em; }
@@ -320,21 +335,28 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 3px s
 .pivot-cell-button:not(:disabled):hover { background: color-mix(in srgb, var(--brand-soft) 65%, transparent); }
 .pivot-cell-button:disabled { opacity: .48; }
 .hovered-pivot-cell { z-index: 12; }
-.pivot-ratio-tooltip { position: absolute; z-index: 40; top: calc(100% - 5px); left: 50%; width: max-content; min-width: 190px; max-width: 250px; transform: translateX(-50%); display: grid; gap: 7px; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--brand) 42%, var(--line)); border-radius: 10px; color: var(--ink); background: var(--surface-raised); box-shadow: var(--shadow-lg); font-size: .78rem; line-height: 1.2; pointer-events: none; animation: ratio-tip-in .1s ease-out; }
-.pivot-ratio-name { color: var(--ink-soft); font-size: .72rem; font-weight: 700; letter-spacing: .035em; text-transform: uppercase; }
-.pivot-ratio-calculation { display: flex; align-items: center; justify-content: center; gap: 7px; font-size: .86rem; }
-.pivot-ratio-calculation strong { color: var(--brand); font-size: 1.05rem; }
-.pivot-ratio-tooltip small { color: var(--brand); font-size: .7rem; font-weight: 700; }
 .selected-pivot { z-index: 2; background: var(--accent-soft) !important; }
 .selected-pivot::after, .historic-pivot::after { content: ""; position: absolute; inset: 13% 10%; border: 2px solid var(--accent); border-radius: 50%; pointer-events: none; transform: rotate(-5deg); z-index: 3; }
-.minimum-ratio::before { content: ""; position: absolute; top: 8px; right: 8px; width: 6px; height: 6px; border-radius: 50%; background: var(--brand); z-index: 4; }
+.minimum-ratio::before, .maximum-ratio::before { content: ""; position: absolute; top: 8px; right: 8px; width: 6px; height: 6px; border-radius: 50%; background: var(--brand); z-index: 4; }
 .recommended-ratio { color: var(--brand); font-weight: 750; }
 .not-eligible { color: var(--faint); }
-.number-value { display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
-.fraction-value { display: inline-grid; grid-template-columns: auto auto; align-items: center; gap: .2em; }
-.fraction-sign { width: .58em; height: 0; border-top: 1.3px solid currentColor; }
-.fraction-stack { display: inline-grid; grid-template-rows: 1em 1.3px 1em; align-items: center; justify-items: stretch; line-height: 1; min-width: 1.35em; font-size: .8em; }
-.fraction-stack::after { content: ""; grid-row: 2; width: 100%; border-top: 1.3px solid currentColor; }
+/* Both active and completed cells use the same full-cell centering slot. This
+   prevents the browser from switching between button-grid and text baselines
+   when a pivot appends a new step. */
+.tableau-number-slot { position: absolute; inset: 0; display: grid; place-items: center; }
+/* In tableau cells the magnitude itself owns the centre. The rule-sign is
+   anchored to that magnitude's left edge, so its gap is constant even when a
+   fraction bar grows for wider numerators. In ordinary equations the same sign
+   remains in normal flow, preventing overlap in exported final-result points. */
+.number-value { --math-rule-width: 1.25px; position: relative; display: inline-flex; align-items: center; justify-content: center; line-height: 1; vertical-align: middle; }
+.inline-number-value { gap: .1em; }
+.number-sign { flex: 0 0 .58em; width: .58em; height: var(--math-rule-width); align-self: center; }
+.number-sign.negative { background: currentColor; }
+.aligned-number-value .number-sign { position: absolute; right: calc(100% + .1em); top: 50%; transform: translateY(-50%); }
+.number-magnitude { display: inline-flex; align-items: center; justify-content: center; }
+.fraction-value { align-items: center; }
+.fraction-stack { display: inline-grid; grid-template-rows: 1em var(--math-rule-width) 1em; align-items: center; justify-items: stretch; line-height: 1; min-width: 1.35em; font-size: .8em; }
+.fraction-stack::after { content: ""; grid-row: 2; width: 100%; height: var(--math-rule-width); background: currentColor; }
 .fraction-stack > span { display: flex; align-items: center; justify-content: center; padding: 0 .16em; }
 .fraction-stack > span:first-child { grid-row: 1; align-self: end; padding-bottom: .08em; }
 .fraction-stack > span:last-child { grid-row: 3; align-self: start; padding-top: .08em; }
@@ -435,7 +457,9 @@ kbd { display: inline-flex; min-height: 22px; align-items: center; padding: 2px 
 .modal-footer { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 13px 22px; background: var(--surface-soft); border-top: 1px solid var(--line); }
 .field-label { display: grid; gap: 6px; color: var(--ink-soft); font-size: .8rem; font-weight: 650; }
 .field-label input, .field-label select { width: 100%; height: 41px; padding: 8px 10px; margin-top: 2px; font-weight: 500; }
+.new-tableau-option-heading { margin: 0 0 14px; color: var(--muted); font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
 .two-column-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+.example-library { max-height: 330px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 2px; overflow-y: auto; }
 .example-card { width: 100%; display: flex; align-items: center; gap: 12px; padding: 13px; text-align: left; border: 1px solid color-mix(in srgb, var(--brand) 30%, var(--line)); border-radius: 12px; background: var(--brand-soft); color: var(--ink); }
 .example-card:hover { border-color: var(--brand); }
 .example-icon { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 10px; color: var(--brand); background: var(--surface); }
@@ -443,8 +467,9 @@ kbd { display: inline-flex; min-height: 22px; align-items: center; padding: 2px 
 .example-card strong { font-size: .84rem; }
 .example-card span { color: var(--muted); font-size: .76rem; }
 .example-arrow { font-size: 1.2rem !important; color: var(--brand) !important; }
-.or-divider { display: flex; align-items: center; gap: 10px; margin: 20px 0; color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; }
-.or-divider::before, .or-divider::after { content: ""; height: 1px; flex: 1; background: var(--line); }
+.or-divider { display: flex; align-items: center; gap: 10px; margin: 20px 0 14px; }
+.or-divider::after { content: ""; height: 1px; flex: 1; background: var(--line); }
+.or-divider .new-tableau-option-heading { margin: 0; }
 .modal-copy { margin: 0 0 15px; color: var(--muted); line-height: 1.55; font-size: .84rem; }
 .row-picker { display: grid; gap: 7px; max-height: 360px; overflow-y: auto; padding: 2px; }
 .row-picker-item { display: flex; align-items: center; gap: 10px; padding: 11px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); cursor: pointer; }
@@ -490,7 +515,9 @@ kbd { display: inline-flex; min-height: 22px; align-items: center; padding: 2px 
 .about-simplex-assistant h3 { margin: 0 0 8px; font-size: .88rem; }
 .about-simplex-assistant p { margin: 6px 0 0; color: var(--muted); font-size: .78rem; line-height: 1.5; }
 
-.export-layout { display: grid; grid-template-columns: 1.3fr .7fr; gap: 20px; }
+.export-layout { display: grid; gap: 16px; }
+.export-settings-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.export-formats { display: grid; grid-template-columns: 1.3fr .7fr; gap: 20px; }
 .format-tabs { display: inline-flex; padding: 3px; border-radius: 9px; background: var(--surface-muted); }
 .format-tabs button { border: 0; border-radius: 6px; background: transparent; color: var(--muted); padding: 6px 12px; font-size: .78rem; font-weight: 650; }
 .format-tabs button.active { color: var(--ink); background: var(--surface); box-shadow: var(--shadow-sm); }
@@ -515,7 +542,6 @@ kbd { display: inline-flex; min-height: 22px; align-items: center; padding: 2px 
   :root[data-theme="system"] .settings-toggle > input:checked + .custom-checkbox,
   :root[data-theme="system"] .export-result-toggle > input:checked + .custom-checkbox { color: #151515; }
   :root[data-theme="system"] .status-badge.green { color: var(--ink); background: #303030; }
-  :root[data-theme="system"] .variable-header.variable-slack::before { background: #a4a4a4; }
 }
 .export-result-toggle > span:last-child { display: grid; gap: 3px; }
 .export-result-toggle strong { font-size: .82rem; }
@@ -547,7 +573,7 @@ kbd { display: inline-flex; min-height: 22px; align-items: center; padding: 2px 
   .brand-block > div:last-child span, .document-title > span:last-child { display: none; }
   .document-title { display: block; }
   .commandbar { padding-inline: 14px; overflow-x: auto; overflow-y: hidden; }
-  .settings-grid, .export-layout { grid-template-columns: 1fr; }
+  .settings-grid, .export-formats, .export-settings-row { grid-template-columns: 1fr; }
   .shortcut-settings { padding-left: 0; padding-top: 22px; border-left: 0; border-top: 1px solid var(--line); }
 }
 
@@ -593,6 +619,7 @@ kbd { display: inline-flex; min-height: 22px; align-items: center; padding: 2px 
   .modal-backdrop { padding: 8px; align-items: end; }
   .modal-card { max-height: calc(100vh - 16px); border-radius: 18px 18px 10px 10px; }
   .two-column-fields { grid-template-columns: 1fr; }
+  .example-library { grid-template-columns: 1fr; }
 }
 
 @media print {
@@ -600,13 +627,15 @@ kbd { display: inline-flex; min-height: 22px; align-items: center; padding: 2px 
   :root { --table-font-size: 9.5pt !important; color-scheme: light; }
   body { zoom: 1 !important; margin: 0; background: #fff !important; color: #000 !important; }
   .app-shell { min-height: auto; }
+  /* The interactive workspace deliberately clips to one viewport. Printing must
+     release that constraint so long and multi-stage tableaux can paginate. */
+  .app-shell.workspace-open { height: auto !important; overflow: visible !important; }
   .topbar, .commandbar, .inspector-card, .toast, .modal-backdrop, .history-intro, .restore-step { display: none !important; }
   .workspace-layout, .app-shell > .history-main { display: none !important; }
   .print-solution-record { display: block; max-width: none; padding: 8mm; }
   .tableau-card, .history-card, .history-card.current { box-shadow: none; border: 0; border-radius: 0; margin: 0; }
   .tableau-card { break-inside: auto; }
-  .tableau-step, .history-card { break-inside: avoid; }
-  .pivot-ratio-tooltip { display: none; }
+  .tableau-step, .history-card { break-inside: auto; }
   .history-view, .history-list { display: block; gap: 0; }
   .tableau-sequence { min-height: 0; max-height: none; overflow: visible; }
   .tableau-sequence .tableau-scroll { width: 100%; min-width: 0; }
@@ -618,21 +647,26 @@ kbd { display: inline-flex; min-height: 22px; align-items: center; padding: 2px 
   .solution-stage { display: block; margin: 0 0 6mm; break-inside: auto; }
   .solution-stage:last-child { margin-bottom: 0; }
   .solution-stage-label { margin: 0 0 2mm; padding: 0; border: 0; border-radius: 0; color: #222; background: #fff; font-size: 9pt; }
-  .solution-stage-tableaux { display: block; border: 1px solid #777; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+  .solution-stage-tableaux { display: block; border: 1.5pt solid #777; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
   .history-card .tableau-scroll { border: 0; }
-  .solution-stage-tableaux .history-card + .history-card .tableau-scroll { border-top: 1px solid #777; }
+  .solution-stage-tableaux .history-card + .history-card .tableau-scroll { border-top: 1pt solid #777; }
   .tableau-grid { width: 100%; min-width: 0 !important; }
+  .tableau-grid tr { break-inside: avoid; page-break-inside: avoid; }
   .tableau-grid col.basis-col, .tableau-grid col.rhs-col { width: 9%; }
   .tableau-grid col.variable-col { width: auto; }
-  .tableau-grid th, .tableau-grid td { position: static !important; min-width: 0; height: 7.5mm; padding: 1.2mm; border-right: 1px solid #777 !important; border-bottom: 1px solid #777 !important; border-left: 0 !important; background: #fff !important; }
+  /* One CSS pixel is only .75pt and PDF rasterizers often drop it. A full
+     typographic point keeps every separator stable across viewer zoom levels. */
+  .tableau-grid th, .tableau-grid td { position: static !important; min-width: 0; height: 5.4mm; padding: .65mm; border-right: 1pt solid #777 !important; border-bottom: 1pt solid #777 !important; border-left: 0 !important; background: #fff !important; }
+  .tableau-number-slot { position: static; display: inline-grid; }
   .tableau-grid th:last-child, .tableau-grid td:last-child { border-right: 0 !important; }
-  .tableau-grid .sticky-left, .tableau-grid .sticky-right, .tableau-grid .rhs-column, .tableau-grid .rhs-cell, .tableau-grid .objective-rhs { border-left: 0 !important; border-right: 1px solid #777 !important; }
+  .tableau-grid .sticky-left, .tableau-grid .sticky-right, .tableau-grid .rhs-column, .tableau-grid .rhs-cell, .tableau-grid .objective-rhs { border-left: 0 !important; border-right: 1pt solid #777 !important; }
+  .tableau-grid .sticky-left { border-right-width: 1.5pt !important; }
   .tableau-grid .rhs-column, .tableau-grid .rhs-cell, .tableau-grid .objective-rhs { border-right: 0 !important; }
   .tableau-grid .objective-row th, .tableau-grid .objective-row td { border-bottom: 0 !important; }
   .tableau-grid .selected-pivot, .tableau-grid .historic-pivot { position: relative !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   .selected-pivot { background: #fff4df !important; }
   .selected-pivot::after, .historic-pivot::after { inset: 13% 10% !important; border-color: #d98520 !important; }
-  .solution-result { margin: 4mm 0 0; padding: 4mm 2mm; border: 1px solid #777; border-radius: 0; box-shadow: none; background: #fff; color: #000; break-inside: avoid; }
+  .solution-result { margin: 4mm 0 0; padding: 4mm 2mm; border: 1pt solid #777; border-radius: 0; box-shadow: none; background: #fff; color: #000; break-inside: avoid; }
   .solution-result-label { display: none; }
   .solution-result-equation { justify-content: center; color: #000; font-size: 13pt; }
   .solution-result-equation > strong { color: #000; }

@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { AppSettings, ShortcutAction } from '../app/settings';
 import { defaultSettings, shortcutFromEvent, shortcutLabels } from '../app/settings';
 import { createTableauHistoryGraphic, tableauGraphicToPng } from '../export/tableauGraphic';
+import { exportFileStem } from '../export/naming';
+import { exampleProblems } from '../model/examples';
 import type { NumberDisplay } from '../math/rational';
 import type { Tableau } from '../model/tableau';
 import {
@@ -51,7 +53,7 @@ export function Modal({ title, eyebrow, onClose, children, wide = false }: Modal
 interface NewProjectModalProps {
   onClose: () => void;
   onCreate: (rows: number, variables: number, title: string) => void;
-  onLoadExample: () => void;
+  onLoadExample: (id: string) => void;
 }
 
 export function NewProjectModal({ onClose, onCreate, onLoadExample }: NewProjectModalProps) {
@@ -59,18 +61,25 @@ export function NewProjectModal({ onClose, onCreate, onLoadExample }: NewProject
   const [variables, setVariables] = useState(5);
   const [title, setTitle] = useState('Untitled tableau');
   return (
-    <Modal title="New tableau" onClose={onClose}>
+    <Modal title="New tableau" onClose={onClose} wide>
       <div className="modal-body">
-        <button className="example-card" type="button" onClick={onLoadExample}>
-          <div className="example-icon"><GridIcon /></div>
-          <div><strong>Load textbook example</strong><span>Example 7.4.1 · 3 constraints · 7 variables</span></div>
-          <span className="example-arrow">→</span>
-        </button>
-        <div className="or-divider"><span>or create a blank tableau</span></div>
-        <label className="field-label">Title<input value={title} onChange={(event) => setTitle(event.target.value)} /></label>
-        <div className="two-column-fields">
-          <label className="field-label">Constraints<input type="number" min="1" max="200" value={rows} onChange={(event) => setRows(Number(event.target.value))} /></label>
-          <label className="field-label">Variables<input type="number" min="1" max="200" value={variables} onChange={(event) => setVariables(Number(event.target.value))} /></label>
+        <section className="blank-tableau-fields" aria-labelledby="blank-tableau-heading">
+          <h3 className="new-tableau-option-heading" id="blank-tableau-heading">Create a blank tableau</h3>
+          <label className="field-label">Title<input value={title} onChange={(event) => setTitle(event.target.value)} /></label>
+          <div className="two-column-fields">
+            <label className="field-label">Constraints<input type="number" min="1" max="200" value={rows} onChange={(event) => setRows(Number(event.target.value))} /></label>
+            <label className="field-label">Variables<input type="number" min="1" max="200" value={variables} onChange={(event) => setVariables(Number(event.target.value))} /></label>
+          </div>
+        </section>
+        <div className="or-divider"><h3 className="new-tableau-option-heading">Or load an example</h3></div>
+        <div className="example-library">
+          {exampleProblems.map((example) => (
+            <button className="example-card" type="button" key={example.id} onClick={() => onLoadExample(example.id)}>
+              <div className="example-icon"><GridIcon /></div>
+              <div><strong>{example.title}</strong><span>{example.description}</span></div>
+              <span className="example-arrow">→</span>
+            </button>
+          ))}
         </div>
       </div>
       <footer className="modal-footer">
@@ -181,7 +190,7 @@ export function SettingsModal({ settings, onChange, onClose }: SettingsModalProp
           <label className="settings-toggle">
             <input type="checkbox" checked={settings.showPivotHints} onChange={(event) => onChange({ ...settings, showPivotHints: event.target.checked })} />
             <span className="custom-checkbox"><CheckIcon /></span>
-            <span><strong>Show pivot guidance</strong><small>Display ratio popovers, minimum markers, and eligibility messages. Primal and dual mode explanations always remain visible.</small></span>
+            <span><strong>Show pivot guidance</strong><small>Display recommended-pivot markers and eligibility messages. Exact ratios remain available in the pivot inspector.</small></span>
           </label>
           <button className="text-button settings-reset" type="button" onClick={() => onChange({
             ...defaultSettings,
@@ -189,7 +198,7 @@ export function SettingsModal({ settings, onChange, onClose }: SettingsModalProp
           })}>Restore appearance defaults</button>
           <section className="about-simplex-assistant">
             <span className="eyebrow">About</span>
-            <h3>Simplex Assistant 0.8.0</h3>
+            <h3>Simplex Assistant 0.9.3</h3>
             <p>This manual simplex-method practice tool keeps every pivot decision yours; only zero entries are forbidden.</p>
             <p>All calculations use arbitrary-precision rational arithmetic.</p>
           </section>
@@ -247,7 +256,7 @@ interface ExportModalProps {
   onIncludeSolutionChange: (include: boolean) => void;
   onClose: () => void;
   onNotice: (message: string) => void;
-  onPrintHistory: (includeResult: boolean, includeSolution: boolean) => void;
+  onPrintHistory: (includeResult: boolean, includeSolution: boolean, fileStem: string) => void;
 }
 
 export function ExportModal({
@@ -266,6 +275,7 @@ export function ExportModal({
   const [format, setFormat] = useState<ExportFormat>('latex');
   const [imageExporting, setImageExporting] = useState<'png' | 'transparent-png' | 'svg' | null>(null);
   const exportOptions = { completeSolution: includeSolution, includeResult };
+  const fileStem = exportFileStem(tableau.title, exportOptions);
   const content = format === 'latex'
     ? exportLatexProject(history, currentIndex, display, exportOptions)
     : format === 'markdown'
@@ -290,16 +300,15 @@ export function ExportModal({
         completeSolution: includeSolution,
         resultTableau: tableau,
       });
-      const scopeName = includeSolution ? 'complete-solution' : 'initial-problem';
       if (kind === 'svg') {
-        downloadBlob(`${safeName(tableau.title)}-${scopeName}.svg`, new Blob(
+        downloadBlob(`${fileStem}.svg`, new Blob(
           [graphic.svg],
           { type: 'image/svg+xml;charset=utf-8' },
         ));
       } else {
         const png = await tableauGraphicToPng(graphic);
         downloadBlob(
-          `${safeName(tableau.title)}-${scopeName}${transparent ? '-no-background' : ''}.png`,
+          `${fileStem}${transparent ? '-no-background' : ''}.png`,
           png,
         );
       }
@@ -313,40 +322,44 @@ export function ExportModal({
   return (
     <Modal title="Export" onClose={onClose} wide>
       <div className="modal-body export-layout">
-        <div className="export-options">
-          <div className="format-tabs" role="tablist">
-            {(['latex', 'markdown', 'csv'] as const).map((candidate) => (
-              <button key={candidate} type="button" className={format === candidate ? 'active' : ''} onClick={() => setFormat(candidate)}>{candidate === 'latex' ? 'LaTeX' : candidate === 'markdown' ? 'Markdown' : 'CSV'}</button>
-            ))}
-          </div>
-          <textarea className="export-preview" readOnly value={content} aria-label="Export preview" onFocus={(event) => event.currentTarget.select()} />
-          <div className="button-row">
-            <button className="primary-button" type="button" onClick={copy}><CopyIcon /> Copy</button>
-            <button className="secondary-button" type="button" onClick={() => downloadText(`${safeName(tableau.title)}.${extension}`, content)}><SaveIcon /> Download</button>
-          </div>
-        </div>
-        <div className="export-actions-panel">
+        <section className="export-settings-row" aria-label="Export options">
           <label className="export-result-toggle">
             <input type="checkbox" checked={includeSolution} onChange={(event) => onIncludeSolutionChange(event.target.checked)} />
             <span className="custom-checkbox"><CheckIcon /></span>
-            <span><strong>Export complete solution</strong><small>Include every tableau through the current step. Turn this off to export only the initial problem.</small></span>
+            <span><strong>Export complete solution</strong><small>Include every pivoting step through the current one. Turn this off to export only the initial problem.</small></span>
           </label>
           <label className="export-result-toggle">
             <input type="checkbox" checked={includeResult} onChange={(event) => onIncludeResultChange(event.target.checked)} />
             <span className="custom-checkbox"><CheckIcon /></span>
             <span><strong>Include final result</strong><small>Append f<sub>min</sub> and the decision-variable point independently of the selected export scope.</small></span>
           </label>
-          <div className="export-action-card"><strong>{includeSolution ? 'Complete solution PDF' : 'Initial problem PDF'}</strong><span>Print {includeSolution ? 'every tableau through the current step' : 'the initial problem'} with the current number display, or save it as PDF from your browser’s print dialog.</span><button className="secondary-button" type="button" onClick={() => onPrintHistory(includeResult, includeSolution)}>Print / PDF</button></div>
-          <div className="export-action-card">
-            <strong>{includeSolution ? 'Complete solution image' : 'Initial problem image'}</strong>
-            <span>Export {includeSolution ? 'every tableau through the current step' : 'the initial problem'} with the current number display as PNG or SVG.</span>
-            <div className="image-export-buttons">
-              <button className="secondary-button" type="button" disabled={imageExporting !== null} onClick={() => void exportImage('png')}>{imageExporting === 'png' ? 'Creating…' : 'PNG'}</button>
-              <button className="secondary-button" type="button" disabled={imageExporting !== null} onClick={() => void exportImage('transparent-png')}>{imageExporting === 'transparent-png' ? 'Creating…' : 'PNG · no background'}</button>
-              <button className="secondary-button" type="button" disabled={imageExporting !== null} onClick={() => void exportImage('svg')}>{imageExporting === 'svg' ? 'Creating…' : 'SVG'}</button>
+        </section>
+        <div className="export-formats">
+          <div className="export-options">
+            <div className="format-tabs" role="tablist">
+              {(['latex', 'markdown', 'csv'] as const).map((candidate) => (
+                <button key={candidate} type="button" className={format === candidate ? 'active' : ''} onClick={() => setFormat(candidate)}>{candidate === 'latex' ? 'LaTeX' : candidate === 'markdown' ? 'Markdown' : 'CSV'}</button>
+              ))}
+            </div>
+            <textarea className="export-preview" readOnly value={content} aria-label="Export preview" onFocus={(event) => event.currentTarget.select()} />
+            <div className="button-row">
+              <button className="primary-button" type="button" onClick={copy}><CopyIcon /> Copy</button>
+              <button className="secondary-button" type="button" onClick={() => downloadText(`${fileStem}.${extension}`, content)}><SaveIcon /> Download</button>
             </div>
           </div>
-          <div className="export-action-card"><strong>Editable Simplex Assistant project</strong><span>{includeSolution ? 'Preserves the complete solution, exact values, and Phase I state.' : 'Saves only the editable initial problem with exact values.'}</span><button className="secondary-button" type="button" onClick={() => downloadText(`${safeName(tableau.title)}.simplex-assistant.json`, includeSolution ? serializeProject(history, currentIndex) : serializeProject(history.slice(0, 1), 0))}>Save project</button></div>
+          <div className="export-actions-panel">
+            <div className="export-action-card"><strong>{includeSolution ? 'Complete solution PDF' : 'Initial problem PDF'}</strong><span>Print {includeSolution ? 'every pivoting step through the current one' : 'the initial problem'} with the current number display, or save it as PDF from your browser’s print dialog.</span><button className="secondary-button" type="button" onClick={() => onPrintHistory(includeResult, includeSolution, fileStem)}>Print / PDF</button></div>
+            <div className="export-action-card">
+              <strong>{includeSolution ? 'Complete solution image' : 'Initial problem image'}</strong>
+              <span>Export {includeSolution ? 'every pivoting step through the current one' : 'the initial problem'} with the current number display as PNG or SVG.</span>
+              <div className="image-export-buttons">
+                <button className="secondary-button" type="button" disabled={imageExporting !== null} onClick={() => void exportImage('png')}>{imageExporting === 'png' ? 'Creating…' : 'PNG'}</button>
+                <button className="secondary-button" type="button" disabled={imageExporting !== null} onClick={() => void exportImage('transparent-png')}>{imageExporting === 'transparent-png' ? 'Creating…' : 'PNG · no background'}</button>
+                <button className="secondary-button" type="button" disabled={imageExporting !== null} onClick={() => void exportImage('svg')}>{imageExporting === 'svg' ? 'Creating…' : 'SVG'}</button>
+              </div>
+            </div>
+            <div className="export-action-card"><strong>Editable Simplex Assistant project</strong><span>{includeSolution ? 'Preserves the complete solution, exact values, and Phase I state.' : 'Saves only the editable initial problem with exact values.'}</span><button className="secondary-button" type="button" onClick={() => downloadText(`${fileStem}.simplex-assistant.json`, includeSolution ? serializeProject(history, currentIndex) : serializeProject(history.slice(0, 1), 0))}>Save project</button></div>
+          </div>
         </div>
       </div>
     </Modal>
@@ -367,8 +380,4 @@ function downloadBlob(filename: string, blob: Blob) {
   anchor.click();
   anchor.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), 0);
-}
-
-function safeName(value: string): string {
-  return value.trim().replace(/[^a-z0-9._-]+/gi, '-').replace(/^-|-$/g, '') || 'tableau';
 }

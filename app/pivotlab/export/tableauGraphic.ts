@@ -4,15 +4,15 @@ import { getSolutionResult, type SolutionResult } from '../model/result';
 import { groupTableauStages } from '../model/stages';
 import type { HistoryEntry, PivotRecord, Tableau } from '../model/tableau';
 
-const BASIS_WIDTH = 112;
-const VALUE_WIDTH = 132;
-const RHS_WIDTH = 112;
-const HEADER_HEIGHT = 52;
-const ROW_HEIGHT = 68;
+const BASIS_WIDTH = 82;
+const VALUE_WIDTH = 84;
+const RHS_WIDTH = 74;
+const HEADER_HEIGHT = 38;
+const ROW_HEIGHT = 48;
 const STEP_SEPARATOR = 2;
-const STAGE_LABEL_HEIGHT = 40;
-const STAGE_GAP = 22;
-const RESULT_HEIGHT = 72;
+const STAGE_LABEL_HEIGHT = 32;
+const STAGE_GAP = 16;
+const RESULT_HEIGHT = 56;
 const INK = '#111111';
 const GRID = '#64756d';
 
@@ -208,23 +208,27 @@ function renderTableau(
   });
   parts.push(numberLabel(tableau.objective[tableau.variables.length], display, rhsX + RHS_WIDTH / 2, objectiveCenterY, true));
 
-  const verticals = [0, BASIS_WIDTH];
+  const verticals = [BASIS_WIDTH];
   for (let index = 1; index <= tableau.variables.length; index += 1) {
     verticals.push(BASIS_WIDTH + index * VALUE_WIDTH);
   }
-  verticals.push(width);
   verticals.forEach((x) => {
     const strong = x === BASIS_WIDTH || x === rhsX;
     parts.push(`<line x1="${x}" y1="${top}" x2="${x}" y2="${top + height}" stroke="${GRID}" stroke-width="${strong ? 2 : 1}"/>`);
   });
 
-  if (drawTopEdge) parts.push(`<line x1="0" y1="${top}" x2="${width}" y2="${top}" stroke="${GRID}"/>`);
+  // SVG strokes centred exactly on x=0 or x=width lose half their weight when
+  // rasterized. Inset the outer frame and make it slightly stronger than the
+  // ordinary grid so PNG, transparent PNG, SVG, and PDF agree visually.
+  parts.push(`<line x1="1" y1="${top}" x2="1" y2="${top + height}" stroke="${GRID}" stroke-width="2"/>`);
+  parts.push(`<line x1="${width - 1}" y1="${top}" x2="${width - 1}" y2="${top + height}" stroke="${GRID}" stroke-width="2"/>`);
+  if (drawTopEdge) parts.push(`<line x1="1" y1="${top + 1}" x2="${width - 1}" y2="${top + 1}" stroke="${GRID}" stroke-width="2"/>`);
   if (showHeader) parts.push(`<line x1="0" y1="${dataTop}" x2="${width}" y2="${dataTop}" stroke="${GRID}"/>`);
   for (let index = 1; index <= tableau.rows.length; index += 1) {
     const rowEdge = dataTop + index * ROW_HEIGHT;
     parts.push(`<line x1="0" y1="${rowEdge}" x2="${width}" y2="${rowEdge}" stroke="${GRID}" stroke-width="${index === tableau.rows.length ? 2 : 1}"/>`);
   }
-  parts.push(`<line x1="0" y1="${top + height}" x2="${width}" y2="${top + height}" stroke="${GRID}"/>`);
+  parts.push(`<line x1="1" y1="${top + height - 1}" x2="${width - 1}" y2="${top + height - 1}" stroke="${GRID}" stroke-width="2"/>`);
 
   if (pivotMark) {
     const rowIndex = tableau.rows.findIndex((row) => row.id === pivotMark.rowId);
@@ -280,7 +284,7 @@ function numberLabel(
   bold = false,
 ): string {
   if (display.mode === 'decimal' || value.denominator === 1n) {
-    return textLabel(formatRational(value, display).replace('-', '−'), x, y, bold, 18);
+    return signedTextLabel(formatRational(value, display), x, y, bold, 18);
   }
 
   const negative = value.numerator < 0n;
@@ -289,12 +293,11 @@ function numberLabel(
   const lineWidth = Math.max(numerator.length, denominator.length) * 8 + 8;
   const signWidth = 8;
   const signGap = 5;
-  const totalWidth = lineWidth + (negative ? signWidth + signGap : 0);
-  const left = x - totalWidth / 2;
-  const fractionX = negative ? left + signWidth + signGap + lineWidth / 2 : x;
+  const fractionX = x;
+  const signRight = fractionX - lineWidth / 2 - signGap;
   const weight = bold ? 700 : 500;
   return [
-    negative ? `<line x1="${left}" y1="${y}" x2="${left + signWidth}" y2="${y}" stroke="${INK}" stroke-opacity="1" stroke-width="1.2"/>` : '',
+    negative ? `<line x1="${signRight - signWidth}" y1="${y}" x2="${signRight}" y2="${y}" stroke="${INK}" stroke-opacity="1" stroke-width="1.2"/>` : '',
     `<text x="${fractionX}" y="${y - 9}" text-anchor="middle" dominant-baseline="middle" ${textPaint()} font-size="14" font-weight="${weight}">${escapeXml(numerator)}</text>`,
     `<line x1="${fractionX - lineWidth / 2}" y1="${y}" x2="${fractionX + lineWidth / 2}" y2="${y}" stroke="${INK}" stroke-opacity="1" stroke-width="1.2"/>`,
     `<text x="${fractionX}" y="${y + 12}" text-anchor="middle" dominant-baseline="middle" ${textPaint()} font-size="14" font-weight="${weight}">${escapeXml(denominator)}</text>`,
@@ -310,6 +313,21 @@ function variableLabel(value: string, x: number, y: number, bold = false): strin
 
 function textLabel(value: string, x: number, y: number, bold = false, size = 15): string {
   return `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" ${textPaint()} font-size="${size}" font-weight="${bold ? 700 : 500}">${escapeXml(value)}</text>`;
+}
+
+function signedTextLabel(value: string, x: number, y: number, bold = false, size = 15): string {
+  if (!value.startsWith('-')) return textLabel(value, x, y, bold, size);
+  const magnitude = value.slice(1);
+  const estimatedMagnitudeWidth = Math.max(size * .55, magnitude.length * size * .56);
+  const signRight = x - estimatedMagnitudeWidth / 2 - size * .1;
+  const signWidth = size * .42;
+  // Exported integers use the same centred rule as exported fractions. A
+  // text-glyph minus has font-dependent bearings and no guaranteed relation to
+  // the fraction bar, which recreates the UI alignment bug in SVG/PNG output.
+  return [
+    `<line x1="${signRight - signWidth}" y1="${y}" x2="${signRight}" y2="${y}" stroke="${INK}" stroke-opacity="1" stroke-width="1.2"/>`,
+    textLabel(magnitude, x, y, bold, size),
+  ].join('');
 }
 
 function textPaint(): string {

@@ -15,14 +15,14 @@ test('the 0.7.1 scrolling, explanations, and control fixes remain available', as
     source('../scripts/install-ci.sh'),
     source('../scripts/validate-artifact.sh'),
   ]);
-  assert.match(app, />1\/2<\/span>/);
-  assert.doesNotMatch(app, /display-fraction-slash/);
+  assert.match(app, /className="display-fraction-sample"[^>]*>1 2<\/span>/);
+  assert.doesNotMatch(app, /<span>1<\/span>|<span>2<\/span>/);
   assert.match(app, /className=\{`decimal-places-slot/);
   assert.match(css, /\.decimal-places-slot \{[^}]*width: 142px;[^}]*visibility: hidden;/s);
   assert.match(css, /\.app-shell\.workspace-open \{[^}]*overflow: hidden;/s);
   assert.match(inspector, /In primal mode, the inspector shows/);
   assert.match(inspector, /In dual mode, the inspector shows/);
-  assert.match(modal, /Primal and dual mode explanations always remain visible/);
+  assert.match(modal, /Exact ratios remain available in the pivot inspector/);
   assert.match(grid, /className="basis-select-display"/);
   assert.match(settings, /redo: 'Ctrl\+Y'/);
   assert.match(installer, /exec bash "\$\{script_dir\}\/sites-env\.sh" -- bash "\$0"/);

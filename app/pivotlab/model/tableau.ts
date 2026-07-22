@@ -1,6 +1,6 @@
 import { Rational } from '../math/rational';
 
-export type VariableKind = 'regular' | 'slack' | 'artificial';
+export type VariableKind = 'regular' | 'slack' | 'artificial' | 'split-positive' | 'split-negative';
 export type Algorithm = 'primal' | 'dual';
 export type AppMode = 'edit' | 'pivot';
 
@@ -51,6 +51,20 @@ export interface HistoryEntry {
   pivot?: PivotRecord;
 }
 
+export function isVariableKind(value: unknown): value is VariableKind {
+  return value === 'regular'
+    || value === 'slack'
+    || value === 'artificial'
+    || value === 'split-positive'
+    || value === 'split-negative';
+}
+
+export function isDecisionVariableKind(kind: VariableKind): boolean {
+  // Split columns remain decision-variable coordinates even though recovering
+  // the unsplit value requires the user-defined positive/negative pairing.
+  return kind === 'regular' || kind === 'split-positive' || kind === 'split-negative';
+}
+
 export function makeId(prefix = 'id'): string {
   const uuid = globalThis.crypto?.randomUUID?.();
   return uuid ? `${prefix}-${uuid}` : `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -76,26 +90,6 @@ export function createBlankTableau(rowCount = 3, variableCount = 5, title = 'Unt
     objective: Array.from({ length: variableCount + 1 }, () => Rational.ZERO),
     phase: 'original',
   };
-}
-
-export function createTextbookExample(): Tableau {
-  const tableau = createBlankTableau(3, 7, 'Example 7.4.1');
-  tableau.variables[4].kind = 'slack';
-  tableau.variables[5].kind = 'slack';
-  tableau.variables[6].kind = 'slack';
-  tableau.rows[0].values = rationals(['2', '0', '-1', '3', '1', '0', '0', '20']);
-  tableau.rows[1].values = rationals(['0', '1', '-2', '-1', '0', '1', '0', '30']);
-  tableau.rows[2].values = rationals(['-3', '6', '3', '4', '0', '0', '1', '24']);
-  tableau.rows[0].basisId = tableau.variables[4].id;
-  tableau.rows[1].basisId = tableau.variables[5].id;
-  tableau.rows[2].basisId = tableau.variables[6].id;
-  tableau.objectiveName = 'f';
-  tableau.objective = rationals(['5', '-18', '-6', '1', '0', '0', '0', '0']);
-  return tableau;
-}
-
-function rationals(values: string[]): Rational[] {
-  return values.map((value) => Rational.parse(value));
 }
 
 export function cloneTableau(tableau: Tableau): Tableau {
@@ -190,6 +184,33 @@ export function minimumEligibleRow(tableau: Tableau, columnIndex: number): numbe
     if (minimumIndex === null || ratio.compare(ratios[minimumIndex]!) < 0) minimumIndex = index;
   });
   return minimumIndex;
+}
+
+export function dualEligibleRatios(tableau: Tableau, rowIndex: number): Array<Rational | null> {
+  const row = tableau.rows[rowIndex];
+  if (!row) return Array.from({ length: tableau.variables.length }, () => null);
+  const rhs = row.values[tableau.variables.length];
+  // With the displayed c_j / a_i,j convention, a dual-simplex candidate has
+  // negative RHS, negative row coefficient, and nonnegative reduced cost.
+  // Its ratio is therefore nonpositive, and the largest ratio is the usual
+  // minimum c_j / (-a_i,j) written without hiding the sign of a_i,j.
+  if (!rhs.isNegative()) return Array.from({ length: tableau.variables.length }, () => null);
+  return tableau.variables.map((_, columnIndex) => {
+    const coefficient = row.values[columnIndex];
+    const objectiveCoefficient = tableau.objective[columnIndex];
+    if (!coefficient.isNegative() || objectiveCoefficient.isNegative()) return null;
+    return objectiveCoefficient.div(coefficient);
+  });
+}
+
+export function maximumEligibleColumn(tableau: Tableau, rowIndex: number): number | null {
+  const ratios = dualEligibleRatios(tableau, rowIndex);
+  let maximumIndex: number | null = null;
+  ratios.forEach((ratio, index) => {
+    if (!ratio) return;
+    if (maximumIndex === null || ratio.compare(ratios[maximumIndex]!) > 0) maximumIndex = index;
+  });
+  return maximumIndex;
 }
 
 export function detectBasis(tableau: Tableau): Tableau {
