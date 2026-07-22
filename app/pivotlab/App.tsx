@@ -7,7 +7,6 @@ import {
   addConstraint,
   addVariable,
   createBlankTableau,
-  createTextbookExample,
   detectBasis,
   finishPhaseOne,
   makeId,
@@ -52,7 +51,7 @@ import { TableauGrid } from './components/TableauGrid';
 
 type View = 'workspace' | 'history';
 type ModalName = 'new' | 'phase1' | 'settings' | 'export' | null;
-const DEFAULT_EXAMPLE_VERSION = '7.4.1';
+const DEFAULT_EXAMPLE_VERSION = '0.9.1-larger-no-artificial-variables';
 
 interface InstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -66,24 +65,32 @@ function initialSession(): { history: HistoryEntry[]; currentIndex: number } {
       const loaded = deserializeProject(stored);
       const defaultVersion = localStorage.getItem('pivotlab-default-example-version');
       localStorage.setItem('pivotlab-default-example-version', DEFAULT_EXAMPLE_VERSION);
-      if (defaultVersion === DEFAULT_EXAMPLE_VERSION || !isLegacyTextbookSession(loaded)) return loaded;
+      if (defaultVersion === DEFAULT_EXAMPLE_VERSION || !isLegacyDefaultSession(loaded)) return loaded;
     }
   } catch {
     // A clean example is safer than blocking startup on a damaged autosave.
   }
-  const tableau = createTextbookExample();
+  const tableau = createExampleProblem('large-no-phase-one');
   return {
     history: [{ id: makeId('history'), label: 'Initial tableau', tableau }],
     currentIndex: 0,
   };
 }
 
-function isLegacyTextbookSession(session: { history: HistoryEntry[] }): boolean {
+function isLegacyDefaultSession(session: { history: HistoryEntry[] }): boolean {
   const tableau = session.history[0]?.tableau;
-  if (!tableau || tableau.title !== 'Example 3.6.1' || tableau.rows.length !== 2 || tableau.variables.length !== 5) return false;
-  return tableau.rows[0]?.values.map((value) => value.toFraction()).join(',') === '3,7,3,1,0,10'
-    && tableau.rows[1]?.values.map((value) => value.toFraction()).join(',') === '2,2,6,0,1,4'
-    && tableau.objective.map((value) => value.toFraction()).join(',') === '-60,-84,-72,0,0,0';
+  if (!tableau || session.history.length !== 1) return false;
+  // Replace only untouched historical defaults. Any renamed, edited, or pivoted
+  // problem is user work and must survive a change of the bundled example.
+  if (tableau.title === 'Example 3.6.1' && tableau.rows.length === 2 && tableau.variables.length === 5) {
+    return tableau.rows[0]?.values.map((value) => value.toFraction()).join(',') === '3,7,3,1,0,10'
+      && tableau.rows[1]?.values.map((value) => value.toFraction()).join(',') === '2,2,6,0,1,4'
+      && tableau.objective.map((value) => value.toFraction()).join(',') === '-60,-84,-72,0,0,0';
+  }
+  if (tableau.title !== 'Example 7.4.1' || tableau.rows.length !== 3 || tableau.variables.length !== 7) return false;
+  return tableau.rows.map((row) => row.values.map((value) => value.toFraction()).join(',')).join('|')
+      === '2,0,-1,3,1,0,0,20|0,1,-2,-1,0,1,0,30|-3,6,3,4,0,0,1,24'
+    && tableau.objective.map((value) => value.toFraction()).join(',') === '5,-18,-6,1,0,0,0,0';
 }
 
 function initialDisplay(): NumberDisplay {
@@ -436,7 +443,9 @@ export default function App() {
           <span>Display</span>
           <div className="segmented-control compact-control">
             <button type="button" className={numberMode === 'fraction' ? 'active' : ''} onClick={() => setDisplay({ mode: 'fraction' })}>
-              <span className="display-fraction-sample" aria-label="Fractions">1<span className="display-fraction-slash" aria-hidden="true">/</span>2</span>
+              {/* Keep 1/2 as one native text run. Splitting or transforming any
+                  glyph makes Firefox drop the leading 1 at extreme page zoom. */}
+              <span className="display-fraction-sample" aria-label="Fractions">1/2</span>
             </button>
             <button type="button" className={numberMode === 'decimal' ? 'active' : ''} onClick={() => setDisplay({ mode: 'decimal', precision: display.mode === 'decimal' ? display.precision : 3 })}>0.50</button>
           </div>
