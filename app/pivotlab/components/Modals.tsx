@@ -61,17 +61,20 @@ export function NewProjectModal({ onClose, onCreate, onLoadExample }: NewProject
   return (
     <Modal title="New tableau" onClose={onClose}>
       <div className="modal-body">
+        <section className="blank-tableau-fields" aria-labelledby="blank-tableau-heading">
+          <h3 id="blank-tableau-heading">Create a blank tableau</h3>
+          <label className="field-label">Title<input value={title} onChange={(event) => setTitle(event.target.value)} /></label>
+          <div className="two-column-fields">
+            <label className="field-label">Constraints<input type="number" min="1" max="200" value={rows} onChange={(event) => setRows(Number(event.target.value))} /></label>
+            <label className="field-label">Variables<input type="number" min="1" max="200" value={variables} onChange={(event) => setVariables(Number(event.target.value))} /></label>
+          </div>
+        </section>
+        <div className="or-divider"><span>or load an example</span></div>
         <button className="example-card" type="button" onClick={onLoadExample}>
           <div className="example-icon"><GridIcon /></div>
           <div><strong>Load textbook example</strong><span>Example 7.4.1 · 3 constraints · 7 variables</span></div>
           <span className="example-arrow">→</span>
         </button>
-        <div className="or-divider"><span>or create a blank tableau</span></div>
-        <label className="field-label">Title<input value={title} onChange={(event) => setTitle(event.target.value)} /></label>
-        <div className="two-column-fields">
-          <label className="field-label">Constraints<input type="number" min="1" max="200" value={rows} onChange={(event) => setRows(Number(event.target.value))} /></label>
-          <label className="field-label">Variables<input type="number" min="1" max="200" value={variables} onChange={(event) => setVariables(Number(event.target.value))} /></label>
-        </div>
       </div>
       <footer className="modal-footer">
         <button className="secondary-button" type="button" onClick={onClose}>Cancel</button>

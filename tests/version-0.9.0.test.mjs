@@ -38,3 +38,11 @@ test('problem names remain editable without invalidating pivot history', async (
   assert.match(app, /onChange=\{\(event\) => renameProblem\(event\.target\.value\)\}/);
   assert.doesNotMatch(app, /aria-label="Tableau title"/);
 });
+
+test('the new-tableau dialog presents blank creation before examples', async () => {
+  const modal = await source('../app/pivotlab/components/Modals.tsx');
+  const blank = modal.indexOf('Create a blank tableau');
+  const example = modal.indexOf('Load textbook example');
+  assert.ok(blank >= 0 && example > blank);
+  assert.match(modal, /or load an example/);
+});
