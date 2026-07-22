@@ -1,6 +1,6 @@
 import { Rational } from '../math/rational';
 
-export type VariableKind = 'regular' | 'slack' | 'artificial';
+export type VariableKind = 'regular' | 'slack' | 'artificial' | 'split-positive' | 'split-negative';
 export type Algorithm = 'primal' | 'dual';
 export type AppMode = 'edit' | 'pivot';
 
@@ -49,6 +49,20 @@ export interface HistoryEntry {
   label: string;
   tableau: Tableau;
   pivot?: PivotRecord;
+}
+
+export function isVariableKind(value: unknown): value is VariableKind {
+  return value === 'regular'
+    || value === 'slack'
+    || value === 'artificial'
+    || value === 'split-positive'
+    || value === 'split-negative';
+}
+
+export function isDecisionVariableKind(kind: VariableKind): boolean {
+  // Split columns remain decision-variable coordinates even though recovering
+  // the unsplit value requires the user-defined positive/negative pairing.
+  return kind === 'regular' || kind === 'split-positive' || kind === 'split-negative';
 }
 
 export function makeId(prefix = 'id'): string {

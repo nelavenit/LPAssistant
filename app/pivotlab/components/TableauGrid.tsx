@@ -92,6 +92,9 @@ export function TableauGrid({
                   key={variable.id}
                   className={`${hovered?.column === columnIndex ? 'column-hover' : ''} variable-header variable-${variable.kind}`}
                 >
+                  <span className="variable-kind-marker" aria-hidden="true">
+                    {variable.kind === 'split-positive' ? '+' : variable.kind === 'split-negative' ? '−' : ''}
+                  </span>
                   {editable ? (
                     <div className="header-editor">
                       <input
@@ -112,6 +115,8 @@ export function TableauGrid({
                           <option value="regular">Original</option>
                           <option value="slack">Slack</option>
                           <option value="artificial">Artificial</option>
+                          <option value="split-positive">Unrestricted (+)</option>
+                          <option value="split-negative">Unrestricted (−)</option>
                         </select>
                         <button
                           className="icon-button tiny danger-quiet"

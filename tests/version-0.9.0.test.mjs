@@ -82,9 +82,9 @@ test('original variables are green and slack variables are gray', async () => {
   const css = await source('../app/globals.css');
   assert.match(css, /--variable-original: #4a9a7c;/);
   assert.match(css, /--variable-slack: #8d9892;/);
-  assert.match(css, /\.variable-header\.variable-regular::before \{ background: var\(--variable-original\); \}/);
-  assert.match(css, /\.variable-header::before \{[^}]*background: var\(--variable-slack\);/s);
-  assert.doesNotMatch(css, /\.variable-header\.variable-slack::before \{ background: #4a9a7c;/);
+  assert.match(css, /\.variable-regular \.variable-kind-marker \{ background: var\(--variable-original\); \}/);
+  assert.match(css, /\.variable-kind-marker \{[^}]*background: var\(--variable-slack\);/s);
+  assert.doesNotMatch(css, /\.variable-slack \.variable-kind-marker \{ background: var\(--variable-original\);/);
 });
 
 test('the variable type selector calls user variables original', async () => {
@@ -142,4 +142,21 @@ test('minus signs sit outside a magnitude that keeps the common centerline', asy
   assert.match(graphic, /const fractionX = x;/);
   assert.match(graphic, /signedTextLabel\(formatRational\(value, display\), x, y, bold, 18\)/);
   assert.doesNotMatch(numberValue, /fraction-sign/);
+});
+
+test('split variable parts have explicit kinds, selector labels, and green signs', async () => {
+  const [tableau, project, result, grid, css] = await Promise.all([
+    source('../app/pivotlab/model/tableau.ts'),
+    source('../app/pivotlab/model/project.ts'),
+    source('../app/pivotlab/model/result.ts'),
+    source('../app/pivotlab/components/TableauGrid.tsx'),
+    source('../app/globals.css'),
+  ]);
+  assert.match(tableau, /'split-positive' \| 'split-negative'/);
+  assert.match(project, /isVariableKind\(kind\)/);
+  assert.match(result, /isDecisionVariableKind\(variable\.kind\)/);
+  assert.match(grid, /<option value="split-positive">Unrestricted \(\+\)<\/option>/);
+  assert.match(grid, /<option value="split-negative">Unrestricted \(−\)<\/option>/);
+  assert.match(grid, /variable\.kind === 'split-positive' \? '\+'/);
+  assert.match(css, /\.variable-split-positive \.variable-kind-marker, \.variable-split-negative \.variable-kind-marker \{[^}]*background: transparent;/s);
 });

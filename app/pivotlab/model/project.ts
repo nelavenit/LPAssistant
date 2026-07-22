@@ -3,7 +3,7 @@ import { formatRational, Rational } from '../math/rational';
 import { getSolutionResult } from './result';
 import { groupTableauStages } from './stages';
 import type { HistoryEntry, PivotRecord, StoredObjective, Tableau, TableauRow, TableauVariable } from './tableau';
-import { assertTableauShape, makeId } from './tableau';
+import { assertTableauShape, isVariableKind, makeId } from './tableau';
 
 export interface PivotLabProject {
   format: 'pivotlab-project';
@@ -87,7 +87,7 @@ function tableauFromUnknown(value: Record<string, unknown>): Tableau {
       throw new Error(`Variable ${index + 1} is malformed.`);
     }
     const kind = candidate.kind;
-    if (kind !== 'regular' && kind !== 'slack' && kind !== 'artificial') {
+    if (!isVariableKind(kind)) {
       throw new Error(`Variable ${index + 1} has an unknown kind.`);
     }
     return { id: candidate.id, name: candidate.name, kind };
