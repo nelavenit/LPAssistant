@@ -280,7 +280,7 @@ function numberLabel(
   bold = false,
 ): string {
   if (display.mode === 'decimal' || value.denominator === 1n) {
-    return textLabel(formatRational(value, display).replace('-', '−'), x, y, bold, 18);
+    return signedTextLabel(formatRational(value, display), x, y, bold, 18);
   }
 
   const negative = value.numerator < 0n;
@@ -289,12 +289,11 @@ function numberLabel(
   const lineWidth = Math.max(numerator.length, denominator.length) * 8 + 8;
   const signWidth = 8;
   const signGap = 5;
-  const totalWidth = lineWidth + (negative ? signWidth + signGap : 0);
-  const left = x - totalWidth / 2;
-  const fractionX = negative ? left + signWidth + signGap + lineWidth / 2 : x;
+  const fractionX = x;
+  const signRight = fractionX - lineWidth / 2 - signGap;
   const weight = bold ? 700 : 500;
   return [
-    negative ? `<line x1="${left}" y1="${y}" x2="${left + signWidth}" y2="${y}" stroke="${INK}" stroke-opacity="1" stroke-width="1.2"/>` : '',
+    negative ? `<line x1="${signRight - signWidth}" y1="${y}" x2="${signRight}" y2="${y}" stroke="${INK}" stroke-opacity="1" stroke-width="1.2"/>` : '',
     `<text x="${fractionX}" y="${y - 9}" text-anchor="middle" dominant-baseline="middle" ${textPaint()} font-size="14" font-weight="${weight}">${escapeXml(numerator)}</text>`,
     `<line x1="${fractionX - lineWidth / 2}" y1="${y}" x2="${fractionX + lineWidth / 2}" y2="${y}" stroke="${INK}" stroke-opacity="1" stroke-width="1.2"/>`,
     `<text x="${fractionX}" y="${y + 12}" text-anchor="middle" dominant-baseline="middle" ${textPaint()} font-size="14" font-weight="${weight}">${escapeXml(denominator)}</text>`,
@@ -310,6 +309,18 @@ function variableLabel(value: string, x: number, y: number, bold = false): strin
 
 function textLabel(value: string, x: number, y: number, bold = false, size = 15): string {
   return `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" ${textPaint()} font-size="${size}" font-weight="${bold ? 700 : 500}">${escapeXml(value)}</text>`;
+}
+
+function signedTextLabel(value: string, x: number, y: number, bold = false, size = 15): string {
+  if (!value.startsWith('-')) return textLabel(value, x, y, bold, size);
+  const magnitude = value.slice(1);
+  const estimatedMagnitudeWidth = Math.max(size * .55, magnitude.length * size * .56);
+  const signX = x - estimatedMagnitudeWidth / 2 - size * .12;
+  const weight = bold ? 700 : 500;
+  return [
+    `<text x="${signX}" y="${y}" text-anchor="end" dominant-baseline="middle" ${textPaint()} font-size="${size}" font-weight="${weight}">−</text>`,
+    textLabel(magnitude, x, y, bold, size),
+  ].join('');
 }
 
 function textPaint(): string {

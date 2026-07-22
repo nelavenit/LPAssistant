@@ -341,9 +341,12 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 3px s
 /* Completed steps render values directly in cells, whereas the active step
    centers them inside buttons. An explicit middle baseline keeps both paths at
    exactly the same vertical position when a new pivoting step is appended. */
-.number-value { display: inline-flex; align-items: center; justify-content: center; line-height: 1; vertical-align: middle; }
-.fraction-value { display: inline-grid; grid-template-columns: auto auto; align-items: center; gap: .2em; }
-.fraction-sign { width: .58em; height: 0; border-top: 1.3px solid currentColor; }
+.number-value { position: relative; display: inline-flex; align-items: center; justify-content: center; line-height: 1; vertical-align: middle; }
+/* Center only the magnitude. The sign sits outside its left edge, so positive
+   and negative versions of the same value share an exact horizontal anchor. */
+.number-sign { position: absolute; top: 50%; right: calc(100% + .16em); line-height: 1; transform: translateY(-52%); }
+.number-magnitude { display: inline-flex; align-items: center; justify-content: center; }
+.fraction-value { display: inline-flex; align-items: center; }
 .fraction-stack { display: inline-grid; grid-template-rows: 1em 1.3px 1em; align-items: center; justify-items: stretch; line-height: 1; min-width: 1.35em; font-size: .8em; }
 .fraction-stack::after { content: ""; grid-row: 2; width: 100%; border-top: 1.3px solid currentColor; }
 .fraction-stack > span { display: flex; align-items: center; justify-content: center; padding: 0 .16em; }

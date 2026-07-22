@@ -129,3 +129,17 @@ test('navigation and history call entries pivoting steps, not tableaux', async (
   assert.match(history, /problem\.stepCount === 1 \? 'step' : 'steps'/);
   assert.doesNotMatch([app, settings, history, modal].join('\n'), /previous tableau|next tableau|every tableau through/i);
 });
+
+test('minus signs sit outside a magnitude that keeps the common centerline', async () => {
+  const [numberValue, css, graphic] = await Promise.all([
+    source('../app/pivotlab/components/NumberValue.tsx'),
+    source('../app/globals.css'),
+    source('../app/pivotlab/export/tableauGraphic.ts'),
+  ]);
+  assert.match(numberValue, /className="number-sign"/);
+  assert.match(numberValue, /className="number-magnitude fraction-stack"/);
+  assert.match(css, /\.number-sign \{[^}]*position: absolute;[^}]*right: calc\(100% \+ \.16em\);/s);
+  assert.match(graphic, /const fractionX = x;/);
+  assert.match(graphic, /signedTextLabel\(formatRational\(value, display\), x, y, bold, 18\)/);
+  assert.doesNotMatch(numberValue, /fraction-sign/);
+});
