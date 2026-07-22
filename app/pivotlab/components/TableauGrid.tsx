@@ -7,6 +7,14 @@ import { ChevronIcon, TrashIcon } from './Icons';
 import { NumberValue } from './NumberValue';
 import { VariableName } from './VariableName';
 
+const variableKindHints: Record<VariableKind, string> = {
+  regular: 'Original variable',
+  slack: 'Slack variable',
+  artificial: 'Artificial variable',
+  'split-positive': 'Positive part of unrestricted variable',
+  'split-negative': 'Negative part of unrestricted variable',
+};
+
 interface TableauGridProps {
   tableau: Tableau;
   mode?: AppMode;
@@ -43,6 +51,7 @@ export function TableauGrid({
   onRemoveConstraint,
 }: TableauGridProps) {
   const [hovered, setHovered] = useState<{ row: number; column: number } | null>(null);
+  const [tappedVariableTip, setTappedVariableTip] = useState<string | null>(null);
   const selectedColumn = selection
     ? tableau.variables.findIndex((variable) => variable.id === selection.variableId)
     : -1;
@@ -91,10 +100,24 @@ export function TableauGrid({
                 <th
                   key={variable.id}
                   className={`${hovered?.column === columnIndex ? 'column-hover' : ''} variable-header variable-${variable.kind}`}
+                  tabIndex={editable ? undefined : 0}
+                  aria-describedby={`variable-kind-tip-${variable.id}`}
+                  onPointerUp={(event) => {
+                    if (event.pointerType !== 'touch') return;
+                    setTappedVariableTip((current) => current === variable.id ? null : variable.id);
+                  }}
+                  onBlur={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setTappedVariableTip(null);
+                  }}
                 >
                   <span className="variable-kind-marker" aria-hidden="true">
                     {variable.kind === 'split-positive' ? '+' : variable.kind === 'split-negative' ? '−' : ''}
                   </span>
+                  <span
+                    id={`variable-kind-tip-${variable.id}`}
+                    className={`control-tooltip variable-kind-tooltip${tappedVariableTip === variable.id ? ' touch-visible' : ''}`}
+                    role="tooltip"
+                  >{variableKindHints[variable.kind]}</span>
                   {editable ? (
                     <div className="header-editor">
                       <input
@@ -115,8 +138,8 @@ export function TableauGrid({
                           <option value="regular">Original</option>
                           <option value="slack">Slack</option>
                           <option value="artificial">Artificial</option>
-                          <option value="split-positive">Unrestricted (+)</option>
-                          <option value="split-negative">Unrestricted (−)</option>
+                          <option value="split-positive">Split (+)</option>
+                          <option value="split-negative">Split (−)</option>
                         </select>
                         <button
                           className="icon-button tiny danger-quiet"

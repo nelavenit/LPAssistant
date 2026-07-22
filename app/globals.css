@@ -317,6 +317,12 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 3px s
 .variable-regular .variable-kind-marker { background: var(--variable-original); }
 .variable-artificial .variable-kind-marker { background: var(--accent); }
 .variable-split-positive .variable-kind-marker, .variable-split-negative .variable-kind-marker { left: 6px; top: 5px; width: 13px; height: 13px; border-radius: 0; background: transparent; }
+.variable-kind-tooltip { top: 27px; left: 7px; width: max-content; min-width: 0; max-width: 240px; text-align: left; transition-delay: 0s; }
+.variable-kind-tooltip::before { left: 4px; }
+/* Hover waits long enough to avoid flashing while the pointer crosses columns;
+   keyboard focus and an intentional touch tap disclose the hint immediately. */
+.variable-header:hover > .variable-kind-tooltip { opacity: 1; visibility: visible; transform: translateY(0); transition-delay: .35s; }
+.variable-header:focus > .variable-kind-tooltip, .variable-header:focus-within > .variable-kind-tooltip, .variable-kind-tooltip.touch-visible { opacity: 1; visibility: visible; transform: translateY(0); transition-delay: 0s; }
 .tableau-grid sub { font-size: .65em; vertical-align: -.22em; }
 .variable-name { display: inline; white-space: nowrap; }
 .variable-name sub { font-size: .65em; line-height: 0; vertical-align: -.28em; }

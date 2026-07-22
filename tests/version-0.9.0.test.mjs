@@ -155,8 +155,27 @@ test('split variable parts have explicit kinds, selector labels, and green signs
   assert.match(tableau, /'split-positive' \| 'split-negative'/);
   assert.match(project, /isVariableKind\(kind\)/);
   assert.match(result, /isDecisionVariableKind\(variable\.kind\)/);
-  assert.match(grid, /<option value="split-positive">Unrestricted \(\+\)<\/option>/);
-  assert.match(grid, /<option value="split-negative">Unrestricted \(−\)<\/option>/);
+  assert.match(grid, /<option value="split-positive">Split \(\+\)<\/option>/);
+  assert.match(grid, /<option value="split-negative">Split \(−\)<\/option>/);
   assert.match(grid, /variable\.kind === 'split-positive' \? '\+'/);
   assert.match(css, /\.variable-split-positive \.variable-kind-marker, \.variable-split-negative \.variable-kind-marker \{[^}]*background: transparent;/s);
+});
+
+test('variable markers explain themselves on delayed hover, focus, and touch', async () => {
+  const [grid, css] = await Promise.all([
+    source('../app/pivotlab/components/TableauGrid.tsx'),
+    source('../app/globals.css'),
+  ]);
+  for (const hint of [
+    'Original variable',
+    'Slack variable',
+    'Artificial variable',
+    'Positive part of unrestricted variable',
+    'Negative part of unrestricted variable',
+  ]) assert.match(grid, new RegExp(hint));
+  assert.match(grid, /aria-describedby=\{`variable-kind-tip-/);
+  assert.match(grid, /event\.pointerType !== 'touch'/);
+  assert.match(grid, /role="tooltip"/);
+  assert.match(css, /\.variable-header:hover > \.variable-kind-tooltip \{[^}]*transition-delay: \.35s;/s);
+  assert.match(css, /\.variable-header:focus > \.variable-kind-tooltip, \.variable-header:focus-within > \.variable-kind-tooltip, \.variable-kind-tooltip\.touch-visible/);
 });
