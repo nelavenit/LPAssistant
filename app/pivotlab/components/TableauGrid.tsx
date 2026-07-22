@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { NumberDisplay } from '../math/rational';
 import type { Algorithm, AppMode, PivotRecord, PivotSelection, Tableau, VariableKind } from '../model/tableau';
-import { cloneTableau, minimumEligibleRow, ratioAt } from '../model/tableau';
+import { cloneTableau, minimumEligibleRow } from '../model/tableau';
 import { CellInput } from './CellInput';
 import { ChevronIcon, TrashIcon } from './Icons';
 import { NumberValue } from './NumberValue';
@@ -101,7 +101,7 @@ export function TableauGrid({
                   key={variable.id}
                   className={`${hovered?.column === columnIndex ? 'column-hover' : ''} variable-header variable-${variable.kind}`}
                   tabIndex={editable ? undefined : 0}
-                  aria-describedby={`variable-kind-tip-${variable.id}`}
+                  aria-describedby={editable ? undefined : `variable-kind-tip-${variable.id}`}
                   onPointerUp={(event) => {
                     if (event.pointerType !== 'touch') return;
                     setTappedVariableTip((current) => current === variable.id ? null : variable.id);
@@ -113,11 +113,15 @@ export function TableauGrid({
                   <span className="variable-kind-marker" aria-hidden="true">
                     {variable.kind === 'split-positive' ? '+' : variable.kind === 'split-negative' ? '−' : ''}
                   </span>
-                  <span
-                    id={`variable-kind-tip-${variable.id}`}
-                    className={`control-tooltip variable-kind-tooltip${tappedVariableTip === variable.id ? ' touch-visible' : ''}`}
-                    role="tooltip"
-                  >{variableKindHints[variable.kind]}</span>
+                  {/* The edit-mode selector already states the type; a second
+                      hint there is redundant and can be clipped by the editor. */}
+                  {!editable && (
+                    <span
+                      id={`variable-kind-tip-${variable.id}`}
+                      className={`control-tooltip variable-kind-tooltip${tappedVariableTip === variable.id ? ' touch-visible' : ''}`}
+                      role="tooltip"
+                    >{variableKindHints[variable.kind]}</span>
+                  )}
                   {editable ? (
                     <div className="header-editor">
                       <input
@@ -202,10 +206,6 @@ export function TableauGrid({
                   const selected = selection?.rowId === row.id && selection.variableId === variable.id;
                   const marked = pivotMark?.rowId === row.id && pivotMark.variableId === variable.id;
                   const isHoveredCell = hovered?.row === rowIndex && hovered.column === columnIndex;
-                  const ratio = isHoveredCell ? ratioAt(tableau, rowIndex, columnIndex, algorithm) : null;
-                  const numerator = algorithm === 'primal'
-                    ? row.values[tableau.variables.length]
-                    : tableau.objective[columnIndex];
                   const classes = [
                     selected ? 'selected-pivot' : '',
                     marked ? 'historic-pivot' : '',
@@ -226,7 +226,7 @@ export function TableauGrid({
                           onCommit={(number) => update((next) => { next.rows[rowIndex].values[columnIndex] = number; })}
                         />
                       ) : compact ? (
-                        <NumberValue value={value} display={display} />
+                        <span className="tableau-number-slot"><NumberValue value={value} display={display} /></span>
                       ) : (
                         <button
                           type="button"
@@ -236,6 +236,8 @@ export function TableauGrid({
                           title={value.isZero() ? 'Zero cannot be used as a pivot' : 'Click to pivot immediately'}
                           onClick={() => onPivot?.({ rowId: row.id, variableId: variable.id })}
                           onMouseEnter={() => {
+                            // Hover feeds the persistent inspector only. Ratio
+                            // popovers duplicate it and obscure nearby cells.
                             setHovered({ row: rowIndex, column: columnIndex });
                             onHoverPivot?.({ rowId: row.id, variableId: variable.id });
                           }}
@@ -244,19 +246,6 @@ export function TableauGrid({
                           }}
                         >
                           <NumberValue value={value} display={display} />
-                          {showPivotHints && ratio && (
-                            <span className="pivot-ratio-tooltip" role="tooltip">
-                              <span className="pivot-ratio-name">{algorithm === 'primal' ? 'RHS' : <>c<sub>{columnIndex + 1}</sub></>} / a<sub>{rowIndex + 1},{columnIndex + 1}</sub></span>
-                              <span className="pivot-ratio-calculation">
-                                <NumberValue value={numerator} display={display} />
-                                <span>÷</span>
-                                <NumberValue value={value} display={display} />
-                                <span>=</span>
-                                <strong><NumberValue value={ratio} display={display} /></strong>
-                              </span>
-                              <small>Click to pivot</small>
-                            </span>
-                          )}
                         </button>
                       )}
                     </td>
@@ -273,7 +262,7 @@ export function TableauGrid({
                       onCommit={(number) => update((next) => { next.rows[rowIndex].values[tableau.variables.length] = number; })}
                     />
                   ) : (
-                    <NumberValue value={row.values[tableau.variables.length]} display={display} />
+                    <span className="tableau-number-slot"><NumberValue value={row.values[tableau.variables.length]} display={display} /></span>
                   )}
                 </td>
               </tr>
@@ -302,7 +291,7 @@ export function TableauGrid({
                     gridColumn={columnIndex}
                     onCommit={(number) => update((next) => { next.objective[columnIndex] = number; })}
                   />
-                ) : <NumberValue value={value} display={display} />}
+                ) : <span className="tableau-number-slot"><NumberValue value={value} display={display} /></span>}
               </td>
             ))}
             <td className="objective-rhs sticky-right">
@@ -315,7 +304,7 @@ export function TableauGrid({
                   gridColumn={tableau.variables.length}
                   onCommit={(number) => update((next) => { next.objective[next.variables.length] = number; })}
                 />
-              ) : <NumberValue value={tableau.objective[tableau.variables.length]} display={display} />}
+              ) : <span className="tableau-number-slot"><NumberValue value={tableau.objective[tableau.variables.length]} display={display} /></span>}
             </td>
           </tr>
         </tfoot>
