@@ -296,7 +296,7 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 3px s
 .tableau-grid col.basis-col { width: var(--table-side-width, 90px); }
 .tableau-grid col.variable-col { width: var(--table-variable-width, 92px); }
 .tableau-grid col.rhs-col { width: var(--table-side-width, 90px); }
-.tableau-grid th, .tableau-grid td { position: relative; min-width: var(--table-variable-width, 92px); height: clamp(58px, calc(var(--table-font-size) * 3.9), 96px); padding: 7px 8px; text-align: center; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--surface); transition: background .09s ease; }
+.tableau-grid th, .tableau-grid td { position: relative; min-width: var(--table-variable-width, 92px); height: clamp(58px, calc(var(--table-font-size) * 3.9), 96px); padding: 7px 8px; text-align: center; vertical-align: middle; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--surface); transition: background .09s ease; }
 .tableau-grid thead th { height: 46px; min-height: 46px; padding: 7px 9px; position: sticky; top: 0; z-index: 6; background: var(--surface-soft); color: var(--ink-soft); font-size: var(--table-font-size); font-weight: 700; }
 .tableau-grid .basis-column, .tableau-grid .basis-cell, .tableau-grid .objective-name { min-width: var(--table-side-width, 90px); max-width: 140px; }
 .tableau-grid .rhs-column, .tableau-grid .rhs-cell, .tableau-grid .objective-rhs { min-width: var(--table-side-width, 90px); border-left: 2px solid var(--line-strong); font-weight: 700; }
@@ -333,7 +333,10 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 3px s
 .minimum-ratio::before { content: ""; position: absolute; top: 8px; right: 8px; width: 6px; height: 6px; border-radius: 50%; background: var(--brand); z-index: 4; }
 .recommended-ratio { color: var(--brand); font-weight: 750; }
 .not-eligible { color: var(--faint); }
-.number-value { display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
+/* Completed steps render values directly in cells, whereas the active step
+   centers them inside buttons. An explicit middle baseline keeps both paths at
+   exactly the same vertical position when a new pivoting step is appended. */
+.number-value { display: inline-flex; align-items: center; justify-content: center; line-height: 1; vertical-align: middle; }
 .fraction-value { display: inline-grid; grid-template-columns: auto auto; align-items: center; gap: .2em; }
 .fraction-sign { width: .58em; height: 0; border-top: 1.3px solid currentColor; }
 .fraction-stack { display: inline-grid; grid-template-rows: 1em 1.3px 1em; align-items: center; justify-items: stretch; line-height: 1; min-width: 1.35em; font-size: .8em; }

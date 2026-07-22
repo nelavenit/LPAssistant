@@ -23,3 +23,9 @@ test('print releases the viewport clip and paginates large tableaux by row', asy
   assert.match(printCss, /\.tableau-grid tr \{ break-inside: avoid; page-break-inside: avoid; \}/);
   assert.doesNotMatch(printCss, /\.tableau-step, \.history-card \{ break-inside: avoid; \}/);
 });
+
+test('fractions keep one vertical anchor in active and completed steps', async () => {
+  const css = await source('../app/globals.css');
+  assert.match(css, /\.tableau-grid th, \.tableau-grid td \{[^}]*vertical-align: middle;/s);
+  assert.match(css, /\.number-value \{[^}]*vertical-align: middle;/s);
+});
