@@ -162,8 +162,8 @@ test('light and dark theme tokens, inspector art, controls, and print frames ret
     readFile(new URL('../README.md', import.meta.url), 'utf8'),
   ]);
 
-  assert.match(app, /<span className="display-fraction-sample" aria-label="Fractions">1<span className="display-fraction-slash"[^>]*>\/<\/span>2<\/span>/);
-  assert.match(css, /\.display-fraction-slash \{[^}]*top: -\.045em;/s);
+  assert.match(app, /<span className="display-fraction-sample" aria-label="Fractions">1\/2<\/span>/);
+  assert.doesNotMatch(css, /\.display-fraction-slash/);
   assert.match(variableName, /className="variable-name"/);
   assert.match(inspector, /var\(--pivot-icon-field\)/);
   assert.match(inspector, /M140 110v16/);
@@ -181,7 +181,7 @@ test('light and dark theme tokens, inspector art, controls, and print frames ret
   assert.doesNotMatch(readme, /clearly named|tableau-only scrolling|persistent Pivot Inspector/i);
 });
 
-test('release metadata and offline cache identify version 0.9.0', async () => {
+test('release metadata and offline cache identify version 0.9.1', async () => {
   const [pkg, lock, readme, modal, worker] = await Promise.all([
     readFile(new URL('../package.json', import.meta.url), 'utf8'),
     readFile(new URL('../package-lock.json', import.meta.url), 'utf8'),
@@ -189,11 +189,11 @@ test('release metadata and offline cache identify version 0.9.0', async () => {
     readFile(new URL('../app/pivotlab/components/Modals.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../public/sw.js', import.meta.url), 'utf8'),
   ]);
-  assert.match(pkg, /"version": "0\.9\.0"/);
-  assert.match(lock, /"version": "0\.9\.0"/);
-  assert.match(readme, /Simplex Assistant 0\.9\.0/);
-  assert.match(modal, /Simplex Assistant 0\.9\.0/);
-  assert.match(worker, /simplex-assistant-shell-v13/);
+  assert.match(pkg, /"version": "0\.9\.1"/);
+  assert.match(lock, /"version": "0\.9\.1"/);
+  assert.match(readme, /Simplex Assistant 0\.9\.1/);
+  assert.match(modal, /Simplex Assistant 0\.9\.1/);
+  assert.match(worker, /simplex-assistant-shell-v14/);
 });
 
 function contrast(first, second) {
