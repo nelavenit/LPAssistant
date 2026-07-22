@@ -25,8 +25,8 @@ export function SolutionHistoryView({ history, currentIndex, display, tableFontS
         <div className="history-icon"><HistoryIcon /></div>
         <div>
           <span className="eyebrow">Solution record</span>
-          <h2>Tableau history</h2>
-          <p>Every applied pivot extends the Simplex Method Tableau. Print or export the complete solution record.</p>
+          <h2>Pivoting steps</h2>
+          <p>Every applied pivot extends the single Simplex Method Tableau. Print or export the complete solution record.</p>
         </div>
       </div>
       <div className="history-list">
@@ -97,7 +97,7 @@ export function ProblemHistoryView({ problems, onOpen, onDelete }: ProblemHistor
               <div className="problem-history-symbol"><FolderIcon /></div>
               <div className="problem-history-details">
                 <h3>{problem.title}</h3>
-                <p>{problem.constraintCount} {problem.constraintCount === 1 ? 'constraint' : 'constraints'} · {problem.variableCount} {problem.variableCount === 1 ? 'variable' : 'variables'} · {problem.stepCount} {problem.stepCount === 1 ? 'tableau' : 'tableaux'}</p>
+                <p>{problem.constraintCount} {problem.constraintCount === 1 ? 'constraint' : 'constraints'} · {problem.variableCount} {problem.variableCount === 1 ? 'variable' : 'variables'} · {problem.stepCount} {problem.stepCount === 1 ? 'step' : 'steps'}</p>
                 <time dateTime={problem.savedAt}>{formatSavedAt(problem.savedAt)}</time>
               </div>
               <button className="secondary-button" type="button" onClick={() => onOpen(problem)}>Resume</button>

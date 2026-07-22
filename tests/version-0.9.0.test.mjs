@@ -113,3 +113,19 @@ test('shared export options precede every export format', async () => {
   assert.match(css, /\.export-settings-row \{[^}]*grid-template-columns: repeat\(2,/s);
   assert.match(css, /\.export-formats \{[^}]*grid-template-columns: 1\.3fr \.7fr;/s);
 });
+
+test('navigation and history call entries pivoting steps, not tableaux', async () => {
+  const [app, settings, history, modal] = await Promise.all([
+    source('../app/pivotlab/App.tsx'),
+    source('../app/pivotlab/app/settings.ts'),
+    source('../app/pivotlab/components/HistoryView.tsx'),
+    source('../app/pivotlab/components/Modals.tsx'),
+  ]);
+  assert.match(app, /Previous pivoting step/);
+  assert.match(app, /Next pivoting step/);
+  assert.match(settings, /previous pivoting step/);
+  assert.match(settings, /next pivoting step/);
+  assert.match(history, /<h2>Pivoting steps<\/h2>/);
+  assert.match(history, /problem\.stepCount === 1 \? 'step' : 'steps'/);
+  assert.doesNotMatch([app, settings, history, modal].join('\n'), /previous tableau|next tableau|every tableau through/i);
+});

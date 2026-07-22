@@ -321,7 +321,7 @@ export function ExportModal({
           <label className="export-result-toggle">
             <input type="checkbox" checked={includeSolution} onChange={(event) => onIncludeSolutionChange(event.target.checked)} />
             <span className="custom-checkbox"><CheckIcon /></span>
-            <span><strong>Export complete solution</strong><small>Include every tableau through the current step. Turn this off to export only the initial problem.</small></span>
+            <span><strong>Export complete solution</strong><small>Include every pivoting step through the current one. Turn this off to export only the initial problem.</small></span>
           </label>
           <label className="export-result-toggle">
             <input type="checkbox" checked={includeResult} onChange={(event) => onIncludeResultChange(event.target.checked)} />
@@ -343,10 +343,10 @@ export function ExportModal({
             </div>
           </div>
           <div className="export-actions-panel">
-            <div className="export-action-card"><strong>{includeSolution ? 'Complete solution PDF' : 'Initial problem PDF'}</strong><span>Print {includeSolution ? 'every tableau through the current step' : 'the initial problem'} with the current number display, or save it as PDF from your browser’s print dialog.</span><button className="secondary-button" type="button" onClick={() => onPrintHistory(includeResult, includeSolution, fileStem)}>Print / PDF</button></div>
+            <div className="export-action-card"><strong>{includeSolution ? 'Complete solution PDF' : 'Initial problem PDF'}</strong><span>Print {includeSolution ? 'every pivoting step through the current one' : 'the initial problem'} with the current number display, or save it as PDF from your browser’s print dialog.</span><button className="secondary-button" type="button" onClick={() => onPrintHistory(includeResult, includeSolution, fileStem)}>Print / PDF</button></div>
             <div className="export-action-card">
               <strong>{includeSolution ? 'Complete solution image' : 'Initial problem image'}</strong>
-              <span>Export {includeSolution ? 'every tableau through the current step' : 'the initial problem'} with the current number display as PNG or SVG.</span>
+              <span>Export {includeSolution ? 'every pivoting step through the current one' : 'the initial problem'} with the current number display as PNG or SVG.</span>
               <div className="image-export-buttons">
                 <button className="secondary-button" type="button" disabled={imageExporting !== null} onClick={() => void exportImage('png')}>{imageExporting === 'png' ? 'Creating…' : 'PNG'}</button>
                 <button className="secondary-button" type="button" disabled={imageExporting !== null} onClick={() => void exportImage('transparent-png')}>{imageExporting === 'transparent-png' ? 'Creating…' : 'PNG · no background'}</button>

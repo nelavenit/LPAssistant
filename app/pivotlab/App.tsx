@@ -448,9 +448,9 @@ export default function App() {
           </span>
         </div>
         <div className="undo-controls">
-          <button className="icon-button" type="button" disabled={mode === 'edit' ? editIndex === 0 : currentIndex === 0} onClick={previousStep} title={`${mode === 'edit' ? 'Undo edit' : 'Previous tableau'} · ${settings.shortcuts.undo}`}><UndoIcon /></button>
+          <button className="icon-button" type="button" disabled={mode === 'edit' ? editIndex === 0 : currentIndex === 0} onClick={previousStep} title={`${mode === 'edit' ? 'Undo edit' : 'Previous pivoting step'} · ${settings.shortcuts.undo}`}><UndoIcon /></button>
           <span>{mode === 'edit' ? `${editIndex + 1} / ${editHistory.length}` : `${currentIndex + 1} / ${history.length}`}</span>
-          <button className="icon-button" type="button" disabled={mode === 'edit' ? editIndex === editHistory.length - 1 : currentIndex === history.length - 1} onClick={nextStep} title={`${mode === 'edit' ? 'Redo edit' : 'Next tableau'} · ${settings.shortcuts.redo}`}><RedoIcon /></button>
+          <button className="icon-button" type="button" disabled={mode === 'edit' ? editIndex === editHistory.length - 1 : currentIndex === history.length - 1} onClick={nextStep} title={`${mode === 'edit' ? 'Redo edit' : 'Next pivoting step'} · ${settings.shortcuts.redo}`}><RedoIcon /></button>
         </div>
       </nav>
 
