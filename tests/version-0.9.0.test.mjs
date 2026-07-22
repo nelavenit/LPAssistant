@@ -4,17 +4,16 @@ import test from 'node:test';
 
 const source = async (path) => readFile(new URL(path, import.meta.url), 'utf8');
 
-test('the display selector keeps zoom-stable digits around a native, optically centered slash', async () => {
+test('the display selector is one native text run at extreme Firefox zoom', async () => {
   const [app, css] = await Promise.all([
     source('../app/pivotlab/App.tsx'),
     source('../app/globals.css'),
   ]);
-  assert.match(app, /className="display-fraction-sample"[^>]*>1<span className="display-fraction-slash"[^>]*>\/<\/span>2<\/span>/);
-  assert.doesNotMatch(app, /<span>1<\/span>|<span>2<\/span>/);
+  assert.match(app, /className="display-fraction-sample"[^>]*>1\/2<\/span>/);
+  assert.doesNotMatch(app, /display-fraction-slash|<span>1<\/span>|<span>2<\/span>/);
   assert.match(css, /\.display-fraction-sample \{[^}]*display: inline;[^}]*white-space: nowrap;/s);
   assert.doesNotMatch(css, /\.display-fraction-sample \{[^}]*inline-flex/s);
-  assert.match(css, /\.display-fraction-slash \{[^}]*top: -\.045em;/s);
-  assert.doesNotMatch(css, /\.display-fraction-slash \{[^}]*transform: rotate/s);
+  assert.doesNotMatch(css, /\.display-fraction-slash/);
 });
 
 test('print releases the viewport clip and paginates large tableaux by row', async () => {
@@ -26,10 +25,14 @@ test('print releases the viewport clip and paginates large tableaux by row', asy
   assert.doesNotMatch(printCss, /\.tableau-step, \.history-card \{ break-inside: avoid; \}/);
 });
 
-test('fractions keep one vertical anchor in active and completed steps', async () => {
-  const css = await source('../app/globals.css');
+test('active and completed values use the same full-cell vertical anchor', async () => {
+  const [grid, css] = await Promise.all([
+    source('../app/pivotlab/components/TableauGrid.tsx'),
+    source('../app/globals.css'),
+  ]);
   assert.match(css, /\.tableau-grid th, \.tableau-grid td \{[^}]*vertical-align: middle;/s);
-  assert.match(css, /\.number-value \{[^}]*vertical-align: middle;/s);
+  assert.match(css, /\.tableau-number-slot \{[^}]*position: absolute;[^}]*place-items: center;/s);
+  assert.match(grid, /compact \? \([\s\S]*className="tableau-number-slot"/);
 });
 
 test('problem names remain editable without invalidating pivot history', async () => {
@@ -132,7 +135,7 @@ test('navigation and history call entries pivoting steps, not tableaux', async (
   assert.doesNotMatch([app, settings, history, modal].join('\n'), /previous tableau|next tableau|every tableau through/i);
 });
 
-test('minus signs sit outside a magnitude that keeps the common centerline', async () => {
+test('minus signs use balanced normal-flow tracks around the common magnitude axis', async () => {
   const [numberValue, css, graphic] = await Promise.all([
     source('../app/pivotlab/components/NumberValue.tsx'),
     source('../app/globals.css'),
@@ -140,7 +143,9 @@ test('minus signs sit outside a magnitude that keeps the common centerline', asy
   ]);
   assert.match(numberValue, /className="number-sign"/);
   assert.match(numberValue, /className="number-magnitude fraction-stack"/);
-  assert.match(css, /\.number-sign \{[^}]*position: absolute;[^}]*right: calc\(100% \+ \.16em\);/s);
+  assert.match(css, /\.number-value \{[^}]*display: inline-grid;[^}]*grid-template-columns: \.82em auto \.82em;/s);
+  assert.match(css, /\.number-sign \{[^}]*grid-column: 1;[^}]*align-self: center;/s);
+  assert.doesNotMatch(css, /\.number-sign \{[^}]*position: absolute/s);
   assert.match(graphic, /const fractionX = x;/);
   assert.match(graphic, /signedTextLabel\(formatRational\(value, display\), x, y, bold, 18\)/);
   assert.doesNotMatch(numberValue, /fraction-sign/);
@@ -175,11 +180,36 @@ test('variable markers explain themselves on delayed hover, focus, and touch', a
     'Positive part of unrestricted variable',
     'Negative part of unrestricted variable',
   ]) assert.match(grid, new RegExp(hint));
-  assert.match(grid, /aria-describedby=\{`variable-kind-tip-/);
+  assert.match(grid, /aria-describedby=\{editable \? undefined : `variable-kind-tip-/);
+  assert.match(grid, /\{!editable && \(\s*<span[\s\S]*role="tooltip"/);
   assert.match(grid, /event\.pointerType !== 'touch'/);
   assert.match(grid, /role="tooltip"/);
   assert.match(css, /\.variable-header:hover > \.variable-kind-tooltip \{[^}]*transition-delay: \.35s;/s);
   assert.match(css, /\.variable-header:focus > \.variable-kind-tooltip, \.variable-header:focus-within > \.variable-kind-tooltip, \.variable-kind-tooltip\.touch-visible/);
+});
+
+test('pivot guidance leaves ratio calculation to the inspector', async () => {
+  const [grid, modal, css] = await Promise.all([
+    source('../app/pivotlab/components/TableauGrid.tsx'),
+    source('../app/pivotlab/components/Modals.tsx'),
+    source('../app/globals.css'),
+  ]);
+  assert.doesNotMatch(grid, /pivot-ratio-tooltip/);
+  assert.doesNotMatch(css, /\.pivot-ratio-tooltip/);
+  assert.match(modal, /Exact ratios remain available in the pivot inspector/);
+});
+
+test('the larger no-artificial-variable example is the new default', async () => {
+  const [app, examples] = await Promise.all([
+    source('../app/pivotlab/App.tsx'),
+    source('../app/pivotlab/model/examples.ts'),
+  ]);
+  assert.match(app, /createExampleProblem\('large-no-phase-one'\)/);
+  assert.doesNotMatch(examples, /textbook-7-4-1|Textbook · Example 7\.4\.1/);
+  assert.match(examples, /title: 'Dantzig rule cycling'/);
+  assert.match(examples, /title: 'Bland’s rule has more pivots than Dantzig'/);
+  assert.match(examples, /title: 'Unfeasible · Small'/);
+  assert.match(examples, /title: 'Unfeasible · Larger'/);
 });
 
 test('the new-tableau dialog renders the curated example library', async () => {
@@ -198,9 +228,9 @@ test('the new-tableau dialog renders the curated example library', async () => {
   assert.match(css, /\.example-library \{[^}]*grid-template-columns: repeat\(2,/s);
 });
 
-test('README documents the substantive 0.9.0 capabilities without visual trivia', async () => {
+test('README documents the substantive 0.9.1 capabilities without visual trivia', async () => {
   const readme = await source('../README.md');
-  assert.match(readme, /Simplex Assistant 0\.9\.0/);
+  assert.match(readme, /Simplex Assistant 0\.9\.1/);
   assert.match(readme, /unrestricted-variable splitting/);
   assert.match(readme, /curated example library/);
   assert.doesNotMatch(readme, /colored variable|green dot|tooltip delay/i);
