@@ -1,6 +1,7 @@
 import type { NumberDisplay } from '../math/rational';
 import { formatRational, type Rational } from '../math/rational';
-import { getSolutionResult, type SolutionResult } from '../model/result';
+import { formatSolutionResult } from '../model/result';
+import { tableauTitle, translate, type Language, type Translate } from '../app/i18n';
 import { groupTableauStages } from '../model/stages';
 import type { HistoryEntry, PivotRecord, Tableau } from '../model/tableau';
 
@@ -27,6 +28,7 @@ interface GraphicOptions {
   includeResult?: boolean;
   completeSolution?: boolean;
   resultTableau?: Tableau;
+  language?: Language;
 }
 
 interface GraphicStep {
@@ -49,7 +51,7 @@ export function createTableauGraphic(
     [{ label: null, steps: [{ tableau, showHeader: true }] }],
     display,
     options,
-    `${tableau.title}: tableau`,
+    tableau.title,
   );
 }
 
@@ -59,6 +61,7 @@ export function createTableauHistoryGraphic(
   display: NumberDisplay,
   options: GraphicOptions = {},
 ): TableauGraphic {
+  const t = translate.bind(null, options.language ?? 'en');
   const completeSolution = options.completeSolution ?? true;
   const entries = completeSolution
     ? history.slice(0, Math.max(0, currentIndex) + 1)
@@ -76,7 +79,7 @@ export function createTableauHistoryGraphic(
     stages,
     display,
     options,
-    `${entries[0].tableau.title}: ${completeSolution ? 'complete solution' : 'initial problem'}`,
+    `${tableauTitle(t, entries[0].tableau.title)}: ${t(completeSolution ? 'complete solution' : 'initial problem')}`,
   );
 }
 
@@ -86,6 +89,7 @@ function createGraphic(
   options: GraphicOptions,
   title: string,
 ): TableauGraphic {
+  const t = translate.bind(null, options.language ?? 'en');
   const layouts = stages.map((stage) => {
     const steps = stage.steps.map((step) => ({
       ...step,
@@ -104,13 +108,14 @@ function createGraphic(
   const transparent = options.transparent ?? false;
   const finalLayout = layouts[layouts.length - 1];
   const finalTableau = options.resultTableau ?? finalLayout.steps[finalLayout.steps.length - 1].tableau;
-  const result = options.includeResult ? getSolutionResult(finalTableau) : null;
-  const resultText = result ? plainResultText(result, display) : null;
-  const resultWidth = resultText ? resultText.length * 10 + 56 : 0;
+  const resultText = options.includeResult ? formatSolutionResult(finalTableau, display, options.language) : '';
+  const resultLines = resultText.match(/.{1,78}(?:\s|$)|\S{1,78}/gu)?.map((line) => line.trim()) ?? [];
+  const resultWidth = Math.max(0, ...resultLines.map((line) => line.length * 9 + 44));
   const width = Math.max(resultWidth, ...layouts.map((layout) => layout.width));
   const tableausHeight = layouts.reduce((sum, layout) => sum + layout.height, 0)
     + Math.max(0, layouts.length - 1) * STAGE_GAP;
-  const height = tableausHeight + (resultText ? RESULT_HEIGHT : 0);
+  const resultHeight = resultText ? RESULT_HEIGHT + (resultLines.length - 1) * 24 : 0;
+  const height = tableausHeight + resultHeight;
   const parts: string[] = [];
 
   if (!transparent) {
@@ -122,7 +127,7 @@ function createGraphic(
     if (stageIndex > 0) y += STAGE_GAP;
     if (stage.label) {
       if (!transparent) parts.push(`<rect x="0" y="${y}" width="${stage.width}" height="${STAGE_LABEL_HEIGHT}" fill="#f2f6f4"/>`);
-      parts.push(`<text x="14" y="${y + STAGE_LABEL_HEIGHT / 2}" text-anchor="start" dominant-baseline="middle" ${textPaint()} font-size="14" font-weight="700">${escapeXml(stage.label)}</text>`);
+      parts.push(`<text x="14" y="${y + STAGE_LABEL_HEIGHT / 2}" text-anchor="start" dominant-baseline="middle" ${textPaint()} font-size="14" font-weight="700">${escapeXml(t(stage.label))}</text>`);
       y += STAGE_LABEL_HEIGHT;
     }
     stage.steps.forEach((layout, stepIndex) => {
@@ -138,21 +143,22 @@ function createGraphic(
         layout.pivotMark,
         stepIndex === 0,
         transparent,
+        t,
       ));
       y += layout.height;
     });
   });
 
-  if (result) {
-    if (!transparent) parts.push(`<rect x="0" y="${tableausHeight}" width="${width}" height="${RESULT_HEIGHT}" fill="#f2f6f4"/>`);
-    parts.push(renderResultEquation(result, display, width, tableausHeight + RESULT_HEIGHT / 2 + 1));
-    parts.push(`<rect x="1" y="${tableausHeight + 1}" width="${width - 2}" height="${RESULT_HEIGHT - 2}" fill="none" stroke="${GRID}" stroke-width="2"/>`);
+  if (resultText) {
+    if (!transparent) parts.push(`<rect x="0" y="${tableausHeight}" width="${width}" height="${resultHeight}" fill="#f2f6f4"/>`);
+    resultLines.forEach((line, index) => parts.push(textLabel(line, width / 2, tableausHeight + RESULT_HEIGHT / 2 + index * 24, true, 16)));
+    parts.push(`<rect x="1" y="${tableausHeight + 1}" width="${width - 2}" height="${resultHeight - 2}" fill="none" stroke="${GRID}" stroke-width="2"/>`);
   }
 
   const svg = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
     `<title>${escapeXml(title)}</title>`,
-    '<desc>Complete Simplex Method Tableau exported from Simplex Assistant.</desc>',
+    `<desc>${escapeXml(t('Complete Simplex Method Tableau exported from Simplex Assistant.'))}</desc>`,
     `<g font-family="Segoe UI, Arial, sans-serif">${parts.join('')}</g>`,
     '</svg>',
   ].join('');
@@ -168,6 +174,7 @@ function renderTableau(
   pivotMark: PivotRecord | undefined,
   drawTopEdge: boolean,
   transparent: boolean,
+  t: Translate,
 ): string[] {
   const width = tableWidth(tableau);
   const height = tableHeight(tableau, showHeader);
@@ -178,7 +185,7 @@ function renderTableau(
 
   if (showHeader) {
     if (!transparent) parts.push(`<rect x="0" y="${top}" width="${width}" height="${HEADER_HEIGHT}" fill="#f2f6f4"/>`);
-    parts.push(textLabel('Basis', BASIS_WIDTH / 2, top + HEADER_HEIGHT / 2, true, 15));
+    parts.push(textLabel(t('Basis'), BASIS_WIDTH / 2, top + HEADER_HEIGHT / 2, true, 15));
     tableau.variables.forEach((variable, index) => {
       parts.push(variableLabel(
         variable.name,
@@ -187,7 +194,7 @@ function renderTableau(
         false,
       ));
     });
-    parts.push(textLabel('RHS', rhsX + RHS_WIDTH / 2, top + HEADER_HEIGHT / 2, true, 15));
+    parts.push(textLabel(t('RHS'), rhsX + RHS_WIDTH / 2, top + HEADER_HEIGHT / 2, true, 15));
   }
   if (!transparent) parts.push(`<rect x="0" y="${objectiveY}" width="${width}" height="${ROW_HEIGHT}" fill="#edf7f1"/>`);
 
@@ -316,28 +323,6 @@ function textPaint(): string {
   return `fill="${INK}" fill-opacity="1"`;
 }
 
-function plainResultText(result: SolutionResult, display: NumberDisplay): string {
-  const point = result.values.map(({ value }) => formatRational(value, display)).join(', ');
-  return `${result.objectiveName}_min = ${formatRational(result.objectiveValue, display)} at (${point})`;
-}
-
-function renderResultEquation(result: SolutionResult, display: NumberDisplay, width: number, y: number): string {
-  const base = result.objectiveName;
-  const suffix = ` = ${formatRational(result.objectiveValue, display).replace('-', '−')} at (${result.values
-    .map(({ value }) => formatRational(value, display).replace('-', '−'))
-    .join(', ')})`;
-  const baseWidth = Math.max(12, base.length * 12);
-  const indexWidth = 20;
-  const suffixWidth = Math.max(24, suffix.length * 10.3);
-  const gap = 7;
-  const totalWidth = baseWidth + indexWidth + gap + suffixWidth;
-  const startX = width / 2 - totalWidth / 2;
-  return [
-    `<text x="${startX}" y="${y}" text-anchor="start" dominant-baseline="middle" ${textPaint()} font-size="20" font-weight="700">${escapeXml(base)}</text>`,
-    `<text x="${startX + baseWidth}" y="${y + 7}" text-anchor="start" dominant-baseline="middle" ${textPaint()} font-size="12" font-weight="700">min</text>`,
-    `<text x="${startX + baseWidth + indexWidth + gap}" y="${y}" text-anchor="start" dominant-baseline="middle" ${textPaint()} font-size="20" font-weight="700">${escapeXml(suffix)}</text>`,
-  ].join('');
-}
 
 function tableWidth(tableau: Tableau): number {
   return BASIS_WIDTH + tableau.variables.length * VALUE_WIDTH + RHS_WIDTH;

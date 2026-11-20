@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useLanguage } from '../app/languageContext';
+import { useRef, useState } from 'react';
 import type { NumberDisplay } from '../math/rational';
 import type { Algorithm, AppMode, PivotRecord, PivotSelection, Tableau, VariableKind } from '../model/tableau';
 import { cloneTableau, minimumEligibleRow, ratioAt } from '../model/tableau';
@@ -16,13 +17,16 @@ interface TableauGridProps {
   pivotMark?: PivotRecord;
   compact?: boolean;
   showHeader?: boolean;
+  repeatHeader?: boolean;
   showPivotHints?: boolean;
   tableFontSize?: number;
   onPivot?: (selection: PivotSelection) => void;
+  onSelectPivot?: (selection: PivotSelection) => void;
   onHoverPivot?: (selection: PivotSelection | null) => void;
   onChange?: (tableau: Tableau) => void;
   onRemoveVariable?: (variableId: string) => void;
   onRemoveConstraint?: (rowId: string) => void;
+  onInvalid?: (message: string) => void;
 }
 
 export function TableauGrid({
@@ -34,14 +38,19 @@ export function TableauGrid({
   pivotMark,
   compact = false,
   showHeader = true,
+  repeatHeader = false,
   showPivotHints = false,
   tableFontSize = 18,
   onPivot,
+  onSelectPivot,
   onHoverPivot,
   onChange,
   onRemoveVariable,
   onRemoveConstraint,
+  onInvalid,
 }: TableauGridProps) {
+  const { t } = useLanguage();
+  const pointerType = useRef('');
   const [hovered, setHovered] = useState<{ row: number; column: number } | null>(null);
   const selectedColumn = selection
     ? tableau.variables.findIndex((variable) => variable.id === selection.variableId)
@@ -49,6 +58,7 @@ export function TableauGrid({
   const minimumRow = showPivotHints && selectedColumn >= 0 && algorithm === 'primal'
     ? minimumEligibleRow(tableau, selectedColumn)
     : null;
+  const minimumRatio = minimumRow === null ? null : ratioAt(tableau, minimumRow, selectedColumn, algorithm);
   const editable = mode === 'edit' && Boolean(onChange) && !compact;
   const variableWidth = Math.max(82, Math.min(148, Math.round(tableFontSize * 5.1)));
   const sideWidth = Math.max(editable ? 120 : 88, Math.min(140, Math.round(tableFontSize * 5)));
@@ -63,16 +73,12 @@ export function TableauGrid({
 
   return (
     <div
-      className={`tableau-scroll${compact ? ' compact-tableau' : ''}`}
+      className={`tableau-scroll${compact ? ' compact-tableau' : ''}${editable ? ' editable-tableau' : ''}`}
       style={{
         '--table-min-width': `${tableMinimumWidth}px`,
         '--table-variable-width': `${variableWidth}px`,
         '--table-side-width': `${sideWidth}px`,
       } as React.CSSProperties}
-      onMouseLeave={() => {
-        setHovered(null);
-        onHoverPivot?.(null);
-      }}
     >
       <table
         className="tableau-grid"
@@ -83,10 +89,10 @@ export function TableauGrid({
           {tableau.variables.map((variable) => <col key={variable.id} className="variable-col" />)}
           <col className="rhs-col" />
         </colgroup>
-        {showHeader && (
-          <thead>
+        {(showHeader || repeatHeader) && (
+          <thead className={showHeader ? undefined : 'repeat-tableau-header'}>
             <tr>
-              <th className="basis-column sticky-left">Basis</th>
+              <th className="basis-column sticky-left">{t('Basis')}</th>
               {tableau.variables.map((variable, columnIndex) => (
                 <th
                   key={variable.id}
@@ -95,7 +101,7 @@ export function TableauGrid({
                   {editable ? (
                     <div className="header-editor">
                       <input
-                        aria-label={`Variable ${columnIndex + 1} name`}
+                        aria-label={t('Variable {column} name', { column: columnIndex + 1 })}
                         value={variable.name}
                         spellCheck={false}
                         onChange={(event) => update((next) => { next.variables[columnIndex].name = event.target.value; })}
@@ -103,21 +109,21 @@ export function TableauGrid({
                       <div className="header-meta">
                         <select
                           value={variable.kind}
-                          aria-label={`${variable.name} type`}
-                          title="Variable type"
+                          aria-label={t('{variable} type', { variable: variable.name })}
+                          title={t('Variable type')}
                           onChange={(event) => update((next) => {
                             next.variables[columnIndex].kind = event.target.value as VariableKind;
                           })}
                         >
-                          <option value="regular">Regular</option>
-                          <option value="slack">Slack</option>
-                          <option value="artificial">Artificial</option>
+                          <option value="regular">{t('Regular')}</option>
+                          <option value="slack">{t('Slack')}</option>
+                          <option value="artificial">{t('Artificial')}</option>
                         </select>
                         <button
                           className="icon-button tiny danger-quiet"
                           type="button"
-                          title={`Remove ${variable.name}`}
-                          aria-label={`Remove ${variable.name}`}
+                          title={t('Remove {variable}', { variable: variable.name })}
+                          aria-label={t('Remove {variable}', { variable: variable.name })}
                           onClick={() => onRemoveVariable?.(variable.id)}
                         ><TrashIcon /></button>
                       </div>
@@ -127,7 +133,7 @@ export function TableauGrid({
                   )}
                 </th>
               ))}
-              <th className="rhs-column sticky-right">RHS</th>
+              <th className="rhs-column sticky-right">{t('RHS')}</th>
             </tr>
           </thead>
         )}
@@ -144,9 +150,11 @@ export function TableauGrid({
                         <select
                           className="basis-native-select"
                           value={row.basisId ?? ''}
-                          aria-label={`Basic variable in row ${rowIndex + 1}`}
+                          aria-label={t('Basic variable in row {row}', { row: rowIndex + 1 })}
                           onChange={(event) => update((next) => {
-                            next.rows[rowIndex].basisId = event.target.value || null;
+                            const id = event.target.value || null;
+                            if (id) next.rows.forEach((candidate) => { if (candidate.basisId === id) candidate.basisId = null; });
+                            next.rows[rowIndex].basisId = id;
                           })}
                         >
                           <option value="">—</option>
@@ -162,8 +170,8 @@ export function TableauGrid({
                       <button
                         className="icon-button tiny danger-quiet basis-row-remove"
                         type="button"
-                        title={`Remove constraint ${rowIndex + 1}`}
-                        aria-label={`Remove constraint ${rowIndex + 1}`}
+                        title={t('Remove constraint {row}', { row: rowIndex + 1 })}
+                        aria-label={t('Remove constraint {row}', { row: rowIndex + 1 })}
                         onClick={() => onRemoveConstraint?.(row.id)}
                       ><TrashIcon /></button>
                     </span>
@@ -178,12 +186,14 @@ export function TableauGrid({
                   const numerator = algorithm === 'primal'
                     ? row.values[tableau.variables.length]
                     : tableau.objective[columnIndex];
+                  const isMinimum = minimumRatio && selectedColumn === columnIndex && value.isPositive()
+                    && numerator.div(value).equals(minimumRatio);
                   const classes = [
                     selected ? 'selected-pivot' : '',
                     marked ? 'historic-pivot' : '',
                     hovered?.column === columnIndex ? 'column-hover' : '',
                     selectedColumn === columnIndex ? 'selected-column' : '',
-                    minimumRow === rowIndex && selectedColumn === columnIndex ? 'minimum-ratio' : '',
+                    isMinimum ? 'minimum-ratio' : '',
                     isHoveredCell ? 'hovered-pivot-cell' : '',
                   ].filter(Boolean).join(' ');
                   return (
@@ -192,33 +202,42 @@ export function TableauGrid({
                         <CellInput
                           value={value}
                           display={display}
-                          ariaLabel={`Coefficient of ${variable.name} in row ${rowIndex + 1}`}
+                          ariaLabel={t('Coefficient of {variable} in row {row}', { variable: variable.name, row: rowIndex + 1 })}
+                          onInvalid={onInvalid}
                           gridRow={rowIndex}
                           gridColumn={columnIndex}
                           onCommit={(number) => update((next) => { next.rows[rowIndex].values[columnIndex] = number; })}
                         />
-                      ) : compact ? (
+                      ) : !onPivot ? (
                         <NumberValue value={value} display={display} />
                       ) : (
                         <button
                           type="button"
                           className="pivot-cell-button"
                           disabled={value.isZero()}
-                          aria-label={`${value.toFraction()} at row ${rowIndex + 1}, column ${variable.name}`}
-                          title={value.isZero() ? 'Zero cannot be used as a pivot' : 'Click to pivot immediately'}
-                          onClick={() => onPivot?.({ rowId: row.id, variableId: variable.id })}
-                          onMouseEnter={() => {
+                          aria-label={t('{value} at row {row}, column {variable}', { value: value.toFraction(), row: rowIndex + 1, variable: variable.name })}
+                          aria-pressed={selected && !isHoveredCell}
+                          title={t(value.isZero() ? 'Zero cannot be used as a pivot' : 'Click to pivot immediately')}
+                          onPointerDown={(event) => { pointerType.current = event.pointerType; }}
+                          onClick={(event) => {
+                            const pivot = { rowId: row.id, variableId: variable.id };
+                            if (event.detail !== 0 && ['touch', 'pen'].includes(pointerType.current) && onSelectPivot) onSelectPivot(pivot);
+                            else onPivot(pivot);
+                          }}
+                          onPointerEnter={(event) => {
+                            if (event.pointerType !== 'mouse') return;
                             setHovered({ row: rowIndex, column: columnIndex });
                             onHoverPivot?.({ rowId: row.id, variableId: variable.id });
                           }}
-                          onMouseLeave={() => {
+                          onPointerLeave={() => {
                             setHovered(null);
+                            onHoverPivot?.(null);
                           }}
                         >
                           <NumberValue value={value} display={display} />
                           {showPivotHints && ratio && (
                             <span className="pivot-ratio-tooltip" role="tooltip">
-                              <span className="pivot-ratio-name">{algorithm === 'primal' ? 'RHS' : <>c<sub>{columnIndex + 1}</sub></>} / a<sub>{rowIndex + 1},{columnIndex + 1}</sub></span>
+                              <span className="pivot-ratio-name">{algorithm === 'primal' ? t('RHS') : <>c<sub>{columnIndex + 1}</sub></>} / a<sub>{rowIndex + 1},{columnIndex + 1}</sub></span>
                               <span className="pivot-ratio-calculation">
                                 <NumberValue value={numerator} display={display} />
                                 <span>÷</span>
@@ -226,7 +245,7 @@ export function TableauGrid({
                                 <span>=</span>
                                 <strong><NumberValue value={ratio} display={display} /></strong>
                               </span>
-                              <small>Click to pivot</small>
+                              <small>{t('Click to pivot immediately')}</small>
                             </span>
                           )}
                         </button>
@@ -239,7 +258,8 @@ export function TableauGrid({
                     <CellInput
                       value={row.values[tableau.variables.length]}
                       display={display}
-                      ariaLabel={`RHS in row ${rowIndex + 1}`}
+                      ariaLabel={t('RHS in row {row}', { row: rowIndex + 1 })}
+                      onInvalid={onInvalid}
                       gridRow={rowIndex}
                       gridColumn={tableau.variables.length}
                       onCommit={(number) => update((next) => { next.rows[rowIndex].values[tableau.variables.length] = number; })}
@@ -257,7 +277,7 @@ export function TableauGrid({
             <th className="objective-name sticky-left">
               {editable ? (
                 <input
-                  aria-label="Objective row name"
+                  aria-label={t('Objective row name')}
                   value={tableau.objectiveName}
                   onChange={(event) => update((next) => { next.objectiveName = event.target.value; })}
                 />
@@ -269,7 +289,8 @@ export function TableauGrid({
                   <CellInput
                     value={value}
                     display={display}
-                    ariaLabel={`Objective coefficient of ${tableau.variables[columnIndex].name}`}
+                    ariaLabel={t('Objective coefficient of {variable}', { variable: tableau.variables[columnIndex].name })}
+                    onInvalid={onInvalid}
                     gridRow={tableau.rows.length}
                     gridColumn={columnIndex}
                     onCommit={(number) => update((next) => { next.objective[columnIndex] = number; })}
@@ -282,7 +303,8 @@ export function TableauGrid({
                 <CellInput
                   value={tableau.objective[tableau.variables.length]}
                   display={display}
-                  ariaLabel="Objective RHS"
+                  ariaLabel={t('Objective RHS')}
+                  onInvalid={onInvalid}
                   gridRow={tableau.rows.length}
                   gridColumn={tableau.variables.length}
                   onCommit={(number) => update((next) => { next.objective[next.variables.length] = number; })}

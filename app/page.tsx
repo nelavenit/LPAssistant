@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useEffect } from 'react';
+import { registerServiceWorker } from './pivotlab/app/serviceWorker';
 
 const SimplexAssistant = dynamic(() => import('./pivotlab/App'), {
   ssr: false,
@@ -15,24 +16,7 @@ const SimplexAssistant = dynamic(() => import('./pivotlab/App'), {
 });
 
 export default function Home() {
-  useEffect(() => {
-    if (!('serviceWorker' in navigator)) return;
-
-    let reloading = false;
-    const adoptUpdate = () => {
-      if (reloading) return;
-      reloading = true;
-      window.location.reload();
-    };
-
-    navigator.serviceWorker.addEventListener('controllerchange', adoptUpdate);
-    navigator.serviceWorker
-      .register(new URL('sw.js', window.location.href), { updateViaCache: 'none' })
-      .then((registration) => registration.update())
-      .catch(() => undefined);
-
-    return () => navigator.serviceWorker.removeEventListener('controllerchange', adoptUpdate);
-  }, []);
+  useEffect(() => { registerServiceWorker(); }, []);
 
   return <SimplexAssistant />;
 }

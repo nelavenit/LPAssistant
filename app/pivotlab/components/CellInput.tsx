@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useId, useLayoutEffect, useRef, useState } from 'react';
+import { errorText } from '../app/i18n';
+import { useLanguage } from '../app/languageContext';
 import type { NumberDisplay } from '../math/rational';
 import { formatRational, Rational } from '../math/rational';
 
@@ -9,27 +11,37 @@ interface CellInputProps {
   gridRow: number;
   gridColumn: number;
   onCommit: (value: Rational) => void;
+  onInvalid?: (message: string) => void;
 }
 
-export function CellInput({ value, display, ariaLabel, gridRow, gridColumn, onCommit }: CellInputProps) {
-  const [draft, setDraft] = useState(() => formatRational(value, display));
+export function CellInput({ value, display, ariaLabel, gridRow, gridColumn, onCommit, onInvalid }: CellInputProps) {
+  const { language, t } = useLanguage();
+  const formatted = formatRational(value, display);
+  const restingValue = language === 'ru' ? formatted.replace('.', ',') : formatted;
+  const [draft, setDraft] = useState(restingValue);
   const [error, setError] = useState<string | null>(null);
-  const focused = useRef(false);
+  const errorId = useId();
+  const [focused, setFocused] = useState(false);
+  const input = useRef<HTMLInputElement>(null);
+  const edited = useRef(false);
   const skipBlurCommit = useRef(false);
 
-  useEffect(() => {
-    if (!focused.current) setDraft(formatRational(value, display));
-  }, [value, display]);
+  useLayoutEffect(() => {
+    if (focused) input.current?.select();
+  }, [focused]);
 
   const commit = (): boolean => {
+    if (!edited.current) return true;
     try {
       const parsed = Rational.parse(draft);
-      onCommit(parsed);
-      setDraft(formatRational(parsed, display));
+      if (!parsed.equals(value)) onCommit(parsed);
+      edited.current = false;
       setError(null);
       return true;
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Invalid number.');
+      const message = errorText(t, caught, 'Invalid number.');
+      setError(message);
+      onInvalid?.(message);
       return false;
     }
   };
@@ -40,38 +52,48 @@ export function CellInput({ value, display, ariaLabel, gridRow, gridColumn, onCo
       `.cell-input[data-grid-row="${row}"][data-grid-column="${column}"]`,
     );
     if (!next) return;
-    skipBlurCommit.current = true;
     next.focus();
-    next.select();
   };
 
   return (
+    <>
     <input
+      ref={input}
       className={`cell-input${error ? ' invalid' : ''}`}
-      value={draft}
+      value={focused || error ? draft : restingValue}
       aria-label={ariaLabel}
       aria-invalid={Boolean(error)}
+      aria-describedby={error ? errorId : undefined}
       data-grid-row={gridRow}
       data-grid-column={gridColumn}
-      title={error ?? 'Integers, decimals, and fractions are accepted'}
+      title={error ?? t('Integers, decimals, and fractions are accepted')}
       spellCheck={false}
-      inputMode="decimal"
-      onFocus={(event) => {
-        focused.current = true;
-        setDraft(value.toFraction());
-        event.currentTarget.select();
+      autoCapitalize="off"
+      autoCorrect="off"
+      enterKeyHint="done"
+      onFocus={() => {
+        setFocused(true);
+        if (!error) setDraft(value.toFraction());
       }}
       onChange={(event) => {
+        edited.current = true;
         setDraft(event.target.value);
         setError(null);
       }}
       onBlur={() => {
-        focused.current = false;
+        setFocused(false);
         if (skipBlurCommit.current) skipBlurCommit.current = false;
         else commit();
       }}
       onKeyDown={(event) => {
-        if (event.key === 'Enter') event.currentTarget.blur();
+        if (event.nativeEvent.isComposing) return;
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          if (commit()) {
+            skipBlurCommit.current = true;
+            event.currentTarget.blur();
+          }
+        }
         const movement = ({
           ArrowUp: [-1, 0],
           ArrowDown: [1, 0],
@@ -83,11 +105,14 @@ export function CellInput({ value, display, ariaLabel, gridRow, gridColumn, onCo
           if (commit()) moveToCell(gridRow + movement[0], gridColumn + movement[1]);
         }
         if (event.key === 'Escape') {
-          setDraft(formatRational(value, display));
+          edited.current = false;
+          skipBlurCommit.current = true;
           setError(null);
           event.currentTarget.blur();
         }
       }}
     />
+    {error && <span id={errorId} className="visually-hidden">{error}</span>}
+    </>
   );
 }

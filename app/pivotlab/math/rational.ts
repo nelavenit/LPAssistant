@@ -1,3 +1,5 @@
+import { AppError } from '../app/i18n';
+
 export class Rational {
   readonly numerator: bigint;
   readonly denominator: bigint;
@@ -34,7 +36,7 @@ export class Rational {
   private static parseDecimal(source: string): Rational {
     const value = source.trim();
     const match = /^([+-]?)(?:(\d+)(?:\.(\d*))?|\.(\d+))(?:[eE]([+-]?\d+))?$/.exec(value);
-    if (!match) throw new SyntaxError(`“${source}” is not a valid integer, decimal, or fraction.`);
+    if (!match) throw new AppError('“{source}” is not a valid integer, decimal, or fraction.', { source });
     const sign = match[1] === '-' ? -1n : 1n;
     const integer = match[2] ?? '0';
     const fractional = match[3] ?? match[4] ?? '';

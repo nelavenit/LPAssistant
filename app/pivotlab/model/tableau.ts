@@ -1,4 +1,5 @@
 import { Rational } from '../math/rational';
+import { AppError, type Translate } from '../app/i18n';
 
 export type VariableKind = 'regular' | 'slack' | 'artificial';
 export type Algorithm = 'primal' | 'dual';
@@ -49,6 +50,14 @@ export interface HistoryEntry {
   label: string;
   tableau: Tableau;
   pivot?: PivotRecord;
+}
+
+export function describeHistoryEntry(t: Translate, entry: HistoryEntry, index: number): string {
+  if (entry.pivot && entry.label === `Pivot ${index}: ${entry.pivot.enteringName} enters`) {
+    return t('Pivot {step}: {variable} enters', { step: index, variable: entry.pivot.enteringName });
+  }
+  if (entry.label === `Step ${index}`) return t('Step {number}', { number: index });
+  return ['Initial tableau', 'Phase I setup', 'Original objective restored'].includes(entry.label) ? t(entry.label) : entry.label;
 }
 
 export function makeId(prefix = 'id'): string {
@@ -137,6 +146,7 @@ export function pivotTableau(
     const multiple = row.values[columnIndex];
     return {
       ...next.rows[index],
+      basisId: row.basisId === entering.id ? null : row.basisId,
       values: row.values.map((value, valueIndex) =>
         value.sub(multiple.mul(normalizedPivotRow[valueIndex])),
       ),
@@ -196,22 +206,63 @@ export function detectBasis(tableau: Tableau): Tableau {
   const next = cloneTableau(tableau);
   const claimed = new Set<string>();
   next.rows.forEach((row, rowIndex) => {
-    const existing = next.variables.find((variable) => variable.id === row.basisId);
-    if (existing && !claimed.has(existing.id)) {
+    const existingColumn = next.variables.findIndex((variable) => variable.id === row.basisId);
+    const existing = next.variables[existingColumn];
+    if (existing && !claimed.has(existing.id) && isUnitColumn(next, rowIndex, existingColumn)) {
       claimed.add(existing.id);
       return;
     }
     const basisVariable = next.variables.find((variable, columnIndex) => {
       if (claimed.has(variable.id)) return false;
-      return next.rows.every((candidateRow, candidateIndex) => {
-        const expected = candidateIndex === rowIndex ? Rational.ONE : Rational.ZERO;
-        return candidateRow.values[columnIndex].equals(expected);
-      });
+      return isUnitColumn(next, rowIndex, columnIndex);
     });
     row.basisId = basisVariable?.id ?? null;
     if (basisVariable) claimed.add(basisVariable.id);
   });
   return next;
+}
+
+function isUnitColumn(tableau: Tableau, rowIndex: number, columnIndex: number): boolean {
+  return tableau.rows.every((row, index) => row.values[columnIndex].equals(index === rowIndex ? Rational.ONE : Rational.ZERO));
+}
+
+function basisColumns(tableau: Tableau): number[] | null {
+  const columns = tableau.rows.map((row) => tableau.variables.findIndex((variable) => variable.id === row.basisId));
+  return columns.every((column, row) => column >= 0 && isUnitColumn(tableau, row, column)) ? columns : null;
+}
+
+export type TableauAnalysis = 'noncanonical' | 'infeasibleBasis' | 'feasible' | 'optimal' | 'unbounded'
+  | 'phaseOneRunning' | 'phaseOneFeasible' | 'phaseOneInfeasible';
+
+export function analyzeTableau(tableau: Tableau): TableauAnalysis {
+  const columns = basisColumns(tableau);
+  if (!columns || columns.some((column) => !tableau.objective[column].isZero())) return 'noncanonical';
+  const rhsIndex = tableau.variables.length;
+  if (tableau.rows.some((row) => row.values[rhsIndex].isNegative())) return 'infeasibleBasis';
+  const improving = tableau.objective.slice(0, rhsIndex).flatMap((value, index) => value.isNegative() ? [index] : []);
+  if (tableau.phase === 'phase1') {
+    const objective = tableau.objective[rhsIndex].neg();
+    // An arbitrary manual pivot or a malformed imported tableau can violate w ≥ 0.
+    if (objective.isNegative()) return 'noncanonical';
+    if (objective.isZero()) return 'phaseOneFeasible';
+    return improving.length === 0 ? 'phaseOneInfeasible' : 'phaseOneRunning';
+  }
+  if (improving.length === 0) return 'optimal';
+  return improving.some((column) => tableau.rows.every((row) => !row.values[column].isPositive())) ? 'unbounded' : 'feasible';
+}
+
+export function canonicalizeObjective(tableau: Tableau): Tableau {
+  const columns = basisColumns(tableau);
+  if (!columns) throw new AppError('Assign a distinct unit column to each basis row first.');
+  const next = cloneTableau(tableau);
+  columns.forEach((column, row) => eliminateObjectiveCoefficient(next, row, column));
+  return next;
+}
+
+function eliminateObjectiveCoefficient(tableau: Tableau, row: number, column: number) {
+  const coefficient = tableau.objective[column];
+  if (coefficient.isZero()) return;
+  tableau.objective = tableau.objective.map((value, index) => value.sub(coefficient.mul(tableau.rows[row].values[index])));
 }
 
 export function addVariable(tableau: Tableau, kind: VariableKind = 'regular'): Tableau {
@@ -260,8 +311,11 @@ export function removeConstraint(tableau: Tableau, rowId: string): Tableau {
 }
 
 export function startPhaseOne(tableau: Tableau, selectedRowIds: string[]): Tableau {
+  assertTableauShape(tableau);
   if (tableau.phase === 'phase1') throw new Error('Phase I is already active.');
-  if (selectedRowIds.length === 0) throw new Error('Select at least one row that needs an artificial variable.');
+  if (selectedRowIds.length === 0 && !tableau.variables.some((variable) => variable.kind === 'artificial')) {
+    throw new Error('Select at least one row that needs an artificial variable.');
+  }
   const selected = new Set(selectedRowIds);
   const missing = selectedRowIds.filter((id) => !tableau.rows.some((row) => row.id === id));
   if (missing.length > 0) throw new Error('A selected constraint no longer exists.');
@@ -277,6 +331,7 @@ export function startPhaseOne(tableau: Tableau, selectedRowIds: string[]): Table
   const names = new Set(next.variables.map((variable) => variable.name));
   for (const row of next.rows) {
     if (!selected.has(row.id)) continue;
+    if (row.values.at(-1)!.isNegative()) row.values = row.values.map((value) => value.neg());
     while (names.has(`z${artificialCounter}`)) artificialCounter += 1;
     const variable: TableauVariable = {
       id: makeId('art'),
@@ -285,13 +340,11 @@ export function startPhaseOne(tableau: Tableau, selectedRowIds: string[]): Table
     };
     names.add(variable.name);
     artificialCounter += 1;
-    const insertionIndex = next.variables.length;
     next.variables.push(variable);
     next.rows.forEach((candidate) => {
       candidate.values.splice(candidate.values.length - 1, 0, candidate.id === row.id ? Rational.ONE : Rational.ZERO);
     });
     row.basisId = variable.id;
-    if (insertionIndex !== next.variables.length - 1) throw new Error('Internal Phase I column error.');
   }
 
   next.objectiveName = '−w';
@@ -299,14 +352,19 @@ export function startPhaseOne(tableau: Tableau, selectedRowIds: string[]): Table
   next.variables.forEach((variable, index) => {
     if (variable.kind === 'artificial') next.objective[index] = Rational.ONE;
   });
-  next.rows.forEach((row) => {
-    const basis = next.variables.find((variable) => variable.id === row.basisId);
-    if (basis?.kind !== 'artificial') return;
-    const coefficient = next.objective[next.variables.findIndex((variable) => variable.id === basis.id)];
-    next.objective = next.objective.map((value, index) => value.sub(coefficient.mul(row.values[index])));
+  next.rows.forEach((row, rowIndex) => {
+    const column = next.variables.findIndex((variable) => variable.id === row.basisId);
+    if (column >= 0 && isUnitColumn(next, rowIndex, column)) eliminateObjectiveCoefficient(next, rowIndex, column);
   });
   next.phase = 'phase1';
   return next;
+}
+
+export function phaseOneSuggestedRows(tableau: Tableau): string[] {
+  return tableau.rows.flatMap((row, rowIndex) => {
+    const column = tableau.variables.findIndex((variable) => variable.id === row.basisId);
+    return column < 0 || !isUnitColumn(tableau, rowIndex, column) || row.values.at(-1)!.isNegative() ? [row.id] : [];
+  });
 }
 
 export function finishPhaseOne(tableau: Tableau): Tableau {
@@ -315,7 +373,10 @@ export function finishPhaseOne(tableau: Tableau): Tableau {
   }
   const rhs = tableau.objective[tableau.variables.length];
   if (!rhs.isZero()) {
-    throw new Error(`Phase I can finish only when −w = 0; currently −w = ${rhs.toFraction()}.`);
+    throw new AppError('Phase I can finish only when −w = 0; currently −w = {value}.', { value: rhs.toFraction() });
+  }
+  if (analyzeTableau(tableau) !== 'phaseOneFeasible') {
+    throw new AppError('Complete the canonical basis and make all free terms nonnegative before finishing Phase I.');
   }
   const next = cloneTableau(tableau);
   const artificialBasisRows = next.rows.filter((row) =>
@@ -336,6 +397,7 @@ export function finishPhaseOne(tableau: Tableau): Tableau {
   next.rows = next.rows.filter((row) => !redundantRowIds.has(row.id));
 
   const keptVariables = next.variables.filter((variable) => variable.kind !== 'artificial');
+  if (keptVariables.length === 0) throw new AppError('The tableau must contain a variable from the original problem.');
   const keptIndices = keptVariables.map((variable) => next.variables.findIndex((candidate) => candidate.id === variable.id));
   const oldRhsIndex = next.variables.length;
   next.rows.forEach((row) => {
@@ -355,12 +417,9 @@ export function finishPhaseOne(tableau: Tableau): Tableau {
   ];
   next.objectiveName = stored.name;
 
-  next.rows.forEach((row) => {
+  next.rows.forEach((row, rowIndex) => {
     const basicColumn = next.variables.findIndex((variable) => variable.id === row.basisId);
-    if (basicColumn < 0) return;
-    const coefficient = next.objective[basicColumn];
-    if (coefficient.isZero()) return;
-    next.objective = next.objective.map((value, index) => value.sub(coefficient.mul(row.values[index])));
+    eliminateObjectiveCoefficient(next, rowIndex, basicColumn);
   });
   next.phase = 'original';
   next.storedObjective = undefined;

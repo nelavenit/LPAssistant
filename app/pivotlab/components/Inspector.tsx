@@ -1,3 +1,5 @@
+import { useLanguage } from '../app/languageContext';
+import type { ReactNode } from 'react';
 import type { NumberDisplay } from '../math/rational';
 import type { Algorithm, PivotSelection, Tableau } from '../model/tableau';
 import { minimumEligibleRow, ratioAt } from '../model/tableau';
@@ -10,6 +12,7 @@ interface EditInspectorProps {
   onAddConstraint: () => void;
   onAddVariable: () => void;
   onDetectBasis: () => void;
+  onCanonicalize: () => void;
   onOpenPhaseOne: () => void;
   onFinishPhaseOne: () => void;
   addConstraintShortcut: string;
@@ -21,54 +24,57 @@ export function EditInspector({
   onAddConstraint,
   onAddVariable,
   onDetectBasis,
+  onCanonicalize,
   onOpenPhaseOne,
   onFinishPhaseOne,
   addConstraintShortcut,
   addVariableShortcut,
 }: EditInspectorProps) {
+  const { t } = useLanguage();
   const basicCount = tableau.rows.filter((row) => row.basisId).length;
   const artificialCount = tableau.variables.filter((variable) => variable.kind === 'artificial').length;
   return (
-    <aside className="inspector-card">
+    <aside className="inspector-card" id="tableau-setup">
       <div className="inspector-heading">
-        <h2>Tableau setup</h2>
-        <p>Enter integers, decimals, or fractions directly in the grid.</p>
+        <h2>{t('Tableau setup')}</h2>
+        <p>{t('Enter integers, decimals, or fractions directly in the grid.')}</p>
       </div>
 
       <div className="dimension-summary">
-        <div><strong>{tableau.rows.length}</strong><span>constraints</span></div>
-        <div><strong>{tableau.variables.length}</strong><span>variables</span></div>
-        <div><strong>{basicCount}/{tableau.rows.length}</strong><span>basis rows</span></div>
+        <div><strong>{tableau.rows.length}</strong><span>{t('constraints')}</span></div>
+        <div><strong>{tableau.variables.length}</strong><span>{t('variables')}</span></div>
+        <div><strong>{basicCount}/{tableau.rows.length}</strong><span>{t('basis rows')}</span></div>
       </div>
 
       <div className="button-stack">
-        <button className="secondary-button" type="button" onClick={onAddConstraint}><PlusIcon /> Add constraint <kbd>{addConstraintShortcut}</kbd></button>
-        <button className="secondary-button" type="button" onClick={onAddVariable}><PlusIcon /> Add variable <kbd>{addVariableShortcut}</kbd></button>
-        <button className="secondary-button" type="button" onClick={onDetectBasis}><SparkIcon /> Detect identity basis</button>
+        <button className="secondary-button" type="button" onClick={onAddConstraint}><PlusIcon /> {t('Add constraint')} <kbd>{addConstraintShortcut}</kbd></button>
+        <button className="secondary-button" type="button" onClick={onAddVariable}><PlusIcon /> {t('Add variable')} <kbd>{addVariableShortcut}</kbd></button>
+        <button className="secondary-button" type="button" onClick={onDetectBasis}><SparkIcon /> {t('Detect identity basis')}</button>
+        <button className="secondary-button" type="button" onClick={onCanonicalize}>{t('Canonicalize objective')}</button>
       </div>
 
       <section className="inspector-section phase-card">
         <div className="section-title-row">
           <div>
-            <span className="eyebrow">Artificial variables</span>
-            <h3>{tableau.phase === 'phase1' ? 'Phase I active' : 'Find a starting BFS'}</h3>
+            <span className="eyebrow">{t('Artificial variables')}</span>
+            <h3>{t(tableau.phase === 'phase1' ? 'Phase I active' : 'Find a starting BFS')}</h3>
           </div>
-          {tableau.phase === 'phase1' && <span className="status-badge amber">{artificialCount} artificial</span>}
+          {tableau.phase === 'phase1' && <span className="status-badge amber">{t('Artificial: {count}', { count: artificialCount })}</span>}
         </div>
         {tableau.phase === 'phase1' ? (
           <>
-            <p>Pivot until <strong>−w = 0</strong> and no artificial variable remains basic.</p>
-            <button className="primary-button" type="button" onClick={onFinishPhaseOne}><CheckIcon /> Finish Phase I</button>
+            <p>{t('Pivot until −w = 0. Remove artificial variables from the basis when possible.')}</p>
+            <button className="primary-button" type="button" onClick={onFinishPhaseOne}><CheckIcon /> {t('Finish Phase I')}</button>
           </>
         ) : (
           <>
-            <p>Select the rows that need artificial basic variables; Simplex Assistant will construct the canonical −w row.</p>
-            <button className="primary-button" type="button" onClick={onOpenPhaseOne}><SparkIcon /> Set up Phase I</button>
+            <p>{t('Select the rows that need artificial basic variables; Simplex Assistant will construct the canonical −w row.')}</p>
+            <button className="primary-button" type="button" onClick={onOpenPhaseOne}><SparkIcon /> {t('Set up Phase I')}</button>
           </>
         )}
       </section>
 
-      <div className="quiet-note"><InfoIcon /><span>Changing entries updates the initial tableau. Switch to Pivot mode to lock it.</span></div>
+      <div className="quiet-note"><InfoIcon /><span>{t('For minimization, enter the objective as −f + cᵀx = b₀. In canonical form its value is −b₀.')}</span></div>
     </aside>
   );
 }
@@ -79,6 +85,7 @@ interface PivotInspectorProps {
   display: NumberDisplay;
   selection: PivotSelection | null;
   showPivotHints: boolean;
+  result: ReactNode;
   onFinishPhaseOne: () => void;
 }
 
@@ -88,8 +95,10 @@ export function PivotInspector({
   display,
   selection,
   showPivotHints,
+  result,
   onFinishPhaseOne,
 }: PivotInspectorProps) {
+  const { t } = useLanguage();
   const rowIndex = selection ? tableau.rows.findIndex((row) => row.id === selection.rowId) : -1;
   const columnIndex = selection ? tableau.variables.findIndex((variable) => variable.id === selection.variableId) : -1;
   const row = rowIndex >= 0 ? tableau.rows[rowIndex] : null;
@@ -98,53 +107,54 @@ export function PivotInspector({
   const ratio = row && variable ? ratioAt(tableau, rowIndex, columnIndex, algorithm) : null;
   const rhs = row ? row.values[tableau.variables.length] : null;
   const leaving = row ? tableau.variables.find((candidate) => candidate.id === row.basisId) : null;
-  const recommendedRow = columnIndex >= 0 ? minimumEligibleRow(tableau, columnIndex) : null;
+  const recommendedRow = showPivotHints && algorithm === 'primal' && columnIndex >= 0 ? minimumEligibleRow(tableau, columnIndex) : null;
   const primalEligible = Boolean(value?.isPositive() && ratio && !ratio.isNegative());
-  const isMinimum = showPivotHints && algorithm === 'primal' && primalEligible && recommendedRow === rowIndex;
+  const isMinimum = recommendedRow !== null && primalEligible && ratio!.equals(ratioAt(tableau, recommendedRow, columnIndex, algorithm)!);
 
   return (
     <aside className="inspector-card pivot-inspector">
       <div className="inspector-heading">
-        <h2>Pivot inspector</h2>
+        <h2>{t('Pivot inspector')}</h2>
       </div>
 
       {tableau.phase === 'phase1' && (
-        <section className="inspector-section phase-card pivot-phase-card">
+        <section className="inspector-section phase-card pivot-phase-card" id="phase-one-controls">
           <div className="section-title-row">
             <div>
-              <span className="eyebrow">Artificial variables</span>
-              <h3>Phase I active</h3>
+              <span className="eyebrow">{t('Artificial variables')}</span>
+              <h3>{t('Phase I active')}</h3>
             </div>
             <span className="status-badge amber">−w</span>
           </div>
-          <p>When <strong>−w = 0</strong> and no artificial variable remains basic, restore the original objective.</p>
-          <button className="primary-button" type="button" onClick={onFinishPhaseOne}><CheckIcon /> Finish Phase I</button>
+          <p>{t('When −w = 0, finish Phase I to restore the original objective.')}</p>
+          <button className="primary-button" type="button" onClick={onFinishPhaseOne}><CheckIcon /> {t('Finish Phase I')}</button>
         </section>
       )}
 
       {!row || !variable || !value ? (
         <div className="empty-inspector">
           <PivotHoverIcon />
-          <h3>Hover to inspect</h3>
-          <p>Move over a nonzero entry to inspect its ratio, then click the cell to pivot immediately.</p>
+          <h3>{t('Select a pivot')}</h3>
+          <p className="mouse-instruction">{t('Hover over a nonzero coefficient to inspect it, or click to pivot.')}</p>
+          <p className="touch-instruction">{t('Tap a nonzero coefficient to inspect it, then choose Apply pivot.')}</p>
         </div>
       ) : (
         <>
           <div className="pivot-summary-grid">
-            <div><span>Entering</span><strong><VariableName name={variable.name} /></strong></div>
-            <div><span>Leaving</span><strong>{leaving ? <VariableName name={leaving.name} /> : '—'}</strong></div>
-            <div><span>Pivot</span><strong><NumberValue value={value} display={display} /></strong></div>
-            <div><span>Row</span><strong>{rowIndex + 1}</strong></div>
+            <div><span>{t('Entering')}</span><strong><VariableName name={variable.name} /></strong></div>
+            <div><span>{t('Leaving')}</span><strong>{leaving ? <VariableName name={leaving.name} /> : '—'}</strong></div>
+            <div><span>{t('Pivot')}</span><strong><NumberValue value={value} display={display} /></strong></div>
+            <div><span>{t('Row')}</span><strong>{rowIndex + 1}</strong></div>
           </div>
 
           <section className="ratio-formula-card">
             <div className="ratio-label">
-              <span>{algorithm === 'primal' ? 'Primal ratio' : 'Dual ratio'}</span>
-              {isMinimum && <span className="status-badge green"><CheckIcon /> minimum</span>}
+              <span>{t(algorithm === 'primal' ? 'Primal ratio' : 'Dual ratio')}</span>
+              {isMinimum && <span className="status-badge green"><CheckIcon /> {t('minimum')}</span>}
             </div>
             <div className="ratio-equation">
               <span className="ratio-fraction">
-                <span>{algorithm === 'primal' ? 'RHS' : 'objective coefficient'}</span>
+                <span>{t(algorithm === 'primal' ? 'RHS' : 'objective coefficient')}</span>
                 <span>a<sub>{rowIndex + 1},{columnIndex + 1}</sub></span>
               </span>
               <span>=</span>
@@ -153,27 +163,28 @@ export function PivotInspector({
                 <span><NumberValue value={value} display={display} /></span>
               </span>
               <span>=</span>
-              <span className="ratio-result">{ratio ? <NumberValue value={ratio} display={display} /> : 'undefined'}</span>
+              <span className="ratio-result">{ratio ? <NumberValue value={ratio} display={display} /> : t('undefined')}</span>
             </div>
             {showPivotHints && algorithm === 'primal' && !primalEligible && (
-              <p className="ratio-warning">This entry is not eligible for the usual nonnegative primal ratio test.</p>
+              <p className="ratio-warning">{t('This entry is not eligible for the usual nonnegative primal ratio test.')}</p>
             )}
           </section>
 
-          <p className="operation-note">Clicking this cell divides its row by <span>{value.toFraction()}</span>, then removes the pivot-column multiples from every other row and the objective row.</p>
+          <p className="operation-note">{t('The pivot divides its row by {value}, then eliminates the pivot column from the other constraint rows and the objective row.', { value: value.toFraction() })}</p>
         </>
       )}
 
-      <div className="quiet-note algorithm-note"><InfoIcon /><span>{algorithm === 'primal'
-        ? <>In primal mode, the inspector shows RHS / a<sub>i,j</sub> down an entering column to compare leaving rows.</>
-        : <>In dual mode, the inspector shows c<sub>j</sub> / a<sub>i,j</sub> across a chosen leaving row to compare entering columns. The row operation itself is unchanged.</>}</span></div>
+      <div className="quiet-note algorithm-note"><InfoIcon /><span>{t(algorithm === 'primal'
+        ? 'In primal mode, compare RHS / aᵢⱼ down the entering column to choose a leaving row.'
+        : 'In dual mode, compare cⱼ / aᵢⱼ across the leaving row to choose an entering column.')}</span></div>
+      <div id="pivot-result">{result}</div>
     </aside>
   );
 }
 
 function PivotHoverIcon() {
   return (
-    <svg className="pivot-hover-icon" viewBox="0 0 180 142" role="img" aria-label="Pointer hovering over the value 5 in a small tableau">
+    <svg className="pivot-hover-icon" viewBox="0 0 180 142" aria-hidden="true">
       <defs>
         <radialGradient id="pivot-cell-field" cx="50%" cy="50%" r="72%">
           <stop offset="0" stopColor="var(--pivot-icon-field)" stopOpacity=".98" />

@@ -38,9 +38,9 @@ export function createProblemHistoryRecord(
   };
 }
 
-export function loadProblemHistory(storage: Pick<HistoryStorage, 'getItem'> = localStorage): ProblemHistoryRecord[] {
+export function loadProblemHistory(storage?: Pick<HistoryStorage, 'getItem'>): ProblemHistoryRecord[] {
   try {
-    const value: unknown = JSON.parse(storage.getItem(PROBLEM_HISTORY_KEY) ?? '[]');
+    const value: unknown = JSON.parse((storage ?? localStorage).getItem(PROBLEM_HISTORY_KEY) ?? '[]');
     if (!Array.isArray(value)) return [];
     return value.filter(isProblemHistoryRecord).slice(0, MAX_SAVED_PROBLEMS);
   } catch {

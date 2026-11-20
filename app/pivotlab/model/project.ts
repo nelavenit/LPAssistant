@@ -1,9 +1,10 @@
 import type { NumberDisplay } from '../math/rational';
 import { formatRational, Rational } from '../math/rational';
-import { getSolutionResult } from './result';
+import { analysisMessages, formatSolutionResult, getSolutionResult } from './result';
+import { AppError, tableauTitle, translate, type Language, type Translate } from '../app/i18n';
 import { groupTableauStages } from './stages';
 import type { HistoryEntry, PivotRecord, StoredObjective, Tableau, TableauRow, TableauVariable } from './tableau';
-import { assertTableauShape, makeId } from './tableau';
+import { analyzeTableau, assertTableauShape, describeHistoryEntry, makeId } from './tableau';
 
 export interface PivotLabProject {
   format: 'pivotlab-project';
@@ -68,7 +69,7 @@ function tableauToDto(tableau: Tableau): TableauDto {
 }
 
 function historyEntryFromUnknown(value: unknown, index: number): HistoryEntry {
-  if (!isObject(value) || !isObject(value.tableau)) throw new Error(`History step ${index + 1} is malformed.`);
+  if (!isObject(value) || !isObject(value.tableau)) throw new AppError("History step {step} is malformed.", { step: index + 1 });
   const tableau = tableauFromUnknown(value.tableau);
   return {
     id: typeof value.id === 'string' ? value.id : makeId('history'),
@@ -84,16 +85,16 @@ function tableauFromUnknown(value: Record<string, unknown>): Tableau {
   }
   const variables = value.variables.map((candidate, index): TableauVariable => {
     if (!isObject(candidate) || typeof candidate.id !== 'string' || typeof candidate.name !== 'string') {
-      throw new Error(`Variable ${index + 1} is malformed.`);
+      throw new AppError("Variable {column} is malformed.", { column: index + 1 });
     }
     const kind = candidate.kind;
     if (kind !== 'regular' && kind !== 'slack' && kind !== 'artificial') {
-      throw new Error(`Variable ${index + 1} has an unknown kind.`);
+      throw new AppError("Variable {column} has an unknown kind.", { column: index + 1 });
     }
     return { id: candidate.id, name: candidate.name, kind };
   });
   const rows = value.rows.map((candidate, index): TableauRow => {
-    if (!isObject(candidate) || !Array.isArray(candidate.values)) throw new Error(`Row ${index + 1} is malformed.`);
+    if (!isObject(candidate) || !Array.isArray(candidate.values)) throw new AppError("Row {row} is malformed.", { row: index + 1 });
     return {
       id: typeof candidate.id === 'string' ? candidate.id : makeId('row'),
       basisId: typeof candidate.basisId === 'string' ? candidate.basisId : null,
@@ -120,6 +121,9 @@ function tableauFromUnknown(value: Record<string, unknown>): Tableau {
     storedObjective,
   };
   assertTableauShape(tableau);
+  if (phase === 'phase1' && (!storedObjective || storedObjective.values.length !== storedObjective.variableIds.length + 1)) {
+    throw new AppError('The saved Phase I objective is incomplete.');
+  }
   return tableau;
 }
 
@@ -190,6 +194,7 @@ export function exportLatex(tableau: Tableau): string {
 export interface ProjectExportOptions {
   completeSolution: boolean;
   includeResult: boolean;
+  language?: Language;
 }
 
 export function exportMarkdownProject(
@@ -198,18 +203,19 @@ export function exportMarkdownProject(
   display: NumberDisplay,
   options: ProjectExportOptions,
 ): string {
+  const t = translate.bind(null, options.language ?? 'en');
   const stages = exportStages(history, currentIndex, options.completeSolution);
-  const lines = [`# ${history[0]?.tableau.title ?? 'Simplex tableau'}`];
+  const lines = [`# ${tableauTitle(t, history[0]?.tableau.title ?? t('Simplex tableau'))}`];
   stages.forEach((stage) => {
-    if (stage.label) lines.push('', `## ${stage.label}`);
-    stage.entries.forEach(({ entry }, index) => {
-      lines.push('', `### ${options.completeSolution ? entry.label : 'Initial problem'}`, '', markdownTable(entry.tableau, display));
-      if (index < stage.entries.length - 1) lines.push('');
+    if (stage.label) lines.push('', `## ${t(stage.label)}`);
+    stage.entries.forEach(({ entry, index }, stageIndex) => {
+      lines.push('', `### ${options.completeSolution ? describeHistoryEntry(t, entry, index) : t('Initial problem')}`, '', markdownTable(entry.tableau, display, t));
+      if (stageIndex < stage.entries.length - 1) lines.push('');
     });
   });
   if (options.includeResult) {
-    const result = getSolutionResult(history[Math.min(currentIndex, history.length - 1)].tableau);
-    lines.push('', '## Final result', '', plainResult(result, display));
+    const tableau = history[Math.min(currentIndex, history.length - 1)].tableau;
+    lines.push('', `## ${t('Current result')}`, '', formatSolutionResult(tableau, display, options.language));
   }
   return lines.join('\n');
 }
@@ -220,19 +226,20 @@ export function exportCsvProject(
   display: NumberDisplay,
   options: ProjectExportOptions,
 ): string {
+  const t = translate.bind(null, options.language ?? 'en');
   const rows: string[][] = [];
   exportStages(history, currentIndex, options.completeSolution).forEach((stage, stageIndex) => {
     if (stageIndex > 0) rows.push([]);
-    if (stage.label) rows.push([stage.label]);
-    stage.entries.forEach(({ entry }, entryIndex) => {
+    if (stage.label) rows.push([t(stage.label)]);
+    stage.entries.forEach(({ entry, index }, entryIndex) => {
       if (entryIndex > 0 || stage.label) rows.push([]);
-      rows.push([options.completeSolution ? entry.label : 'Initial problem']);
-      rows.push(...csvTable(entry.tableau, display));
+      rows.push([options.completeSolution ? describeHistoryEntry(t, entry, index) : t('Initial problem')]);
+      rows.push(...csvTable(entry.tableau, display, t));
     });
   });
   if (options.includeResult) {
-    const result = getSolutionResult(history[Math.min(currentIndex, history.length - 1)].tableau);
-    rows.push([], ['Final result', plainResult(result, display)]);
+    const tableau = history[Math.min(currentIndex, history.length - 1)].tableau;
+    rows.push([], [t('Current result'), formatSolutionResult(tableau, display, options.language)]);
   }
   return rows.map((row) => row.map(csvCell).join(',')).join('\r\n');
 }
@@ -243,18 +250,28 @@ export function exportLatexProject(
   display: NumberDisplay,
   options: ProjectExportOptions,
 ): string {
+  const t = translate.bind(null, options.language ?? 'en');
   const blocks: string[] = [];
   exportStages(history, currentIndex, options.completeSolution).forEach((stage) => {
-    if (stage.label) blocks.push(`\\textbf{${latexEscaped(stage.label)}}`);
-    stage.entries.forEach(({ entry }) => {
-      blocks.push(`\\text{${latexEscaped(options.completeSolution ? entry.label : 'Initial problem')}}`);
-      blocks.push(latexTable(entry.tableau, display));
+    if (stage.label) blocks.push(`\\textbf{${latexEscaped(t(stage.label))}}`);
+    stage.entries.forEach(({ entry, index }) => {
+      blocks.push(`\\text{${latexEscaped(options.completeSolution ? describeHistoryEntry(t, entry, index) : t('Initial problem'))}}`);
+      blocks.push(latexTable(entry.tableau, display, t));
     });
   });
   if (options.includeResult) {
-    const result = getSolutionResult(history[Math.min(currentIndex, history.length - 1)].tableau);
-    const point = result.values.map(({ value }) => latexDisplayRational(value, display)).join(', ');
-    blocks.push(`\\text{Final result: } ${latexEscaped(result.objectiveName)}_{\\min} = ${latexDisplayRational(result.objectiveValue, display)} \\text{ at } (${point})`);
+    const tableau = history[Math.min(currentIndex, history.length - 1)].tableau;
+    const analysis = analyzeTableau(tableau);
+    blocks.push(latexText(t('Current result')));
+    if (analysis === 'optimal' || analysis === 'feasible') {
+      const result = getSolutionResult(tableau);
+      const point = result.values.map(({ value }) => latexDisplayRational(value, display)).join(', ');
+      const objective = latexVariable(result.objectiveName) + (analysis === 'optimal' ? '_{\\min}' : '');
+      const coordinates = point ? latexText(' ' + t('at') + ' ') + '(' + point + ')' : '';
+      blocks.push(objective + ' = ' + latexDisplayRational(result.objectiveValue, display) + coordinates);
+    } else {
+      blocks.push(latexText(t(analysisMessages[analysis])));
+    }
   }
   return ['\\[', '\\begin{gathered}', blocks.join(' \\\\[0.8em]\n'), '\\end{gathered}', '\\]'].join('\n');
 }
@@ -267,8 +284,8 @@ function exportStages(history: HistoryEntry[], currentIndex: number, completeSol
     : groupTableauStages(history.slice(0, 1), 0);
 }
 
-function markdownTable(tableau: Tableau, display: NumberDisplay): string {
-  const headers = ['Basis', ...tableau.variables.map((variable) => variable.name), 'RHS'];
+function markdownTable(tableau: Tableau, display: NumberDisplay, t: Translate): string {
+  const headers = [t('Basis'), ...tableau.variables.map((variable) => variable.name), t('RHS')];
   const rows = tableau.rows.map((row) => [
     tableau.variables.find((variable) => variable.id === row.basisId)?.name ?? '—',
     ...row.values.map((value) => formatRational(value, display)),
@@ -281,9 +298,9 @@ function markdownTable(tableau: Tableau, display: NumberDisplay): string {
   ].join('\n');
 }
 
-function csvTable(tableau: Tableau, display: NumberDisplay): string[][] {
+function csvTable(tableau: Tableau, display: NumberDisplay, t: Translate): string[][] {
   return [
-    ['Basis', ...tableau.variables.map((variable) => variable.name), 'RHS'],
+    [t('Basis'), ...tableau.variables.map((variable) => variable.name), t('RHS')],
     ...tableau.rows.map((row) => [
       tableau.variables.find((variable) => variable.id === row.basisId)?.name ?? '',
       ...row.values.map((value) => formatRational(value, display)),
@@ -292,9 +309,9 @@ function csvTable(tableau: Tableau, display: NumberDisplay): string[][] {
   ];
 }
 
-function latexTable(tableau: Tableau, display: NumberDisplay): string {
+function latexTable(tableau: Tableau, display: NumberDisplay, t: Translate): string {
   const columns = `c|${'c'.repeat(tableau.variables.length)}|c`;
-  const header = ['\\text{Basis}', ...tableau.variables.map((variable) => latexVariable(variable.name)), '\\text{RHS}'];
+  const header = [latexText(t('Basis')), ...tableau.variables.map((variable) => latexVariable(variable.name)), latexText(t('RHS'))];
   const rows = tableau.rows.map((row) => [
     latexVariable(tableau.variables.find((variable) => variable.id === row.basisId)?.name ?? '—'),
     ...row.values.map((value) => latexDisplayRational(value, display)),
@@ -331,10 +348,6 @@ function latexEscaped(value: string): string {
     .replaceAll('}', '\\}');
 }
 
-function plainResult(result: ReturnType<typeof getSolutionResult>, display: NumberDisplay): string {
-  const point = result.values.map(({ value }) => formatRational(value, display)).join(', ');
-  return `${result.objectiveName}_min = ${formatRational(result.objectiveValue, display)} at (${point})`;
-}
 
 function latexRational(value: Rational): string {
   if (value.denominator === 1n) return value.numerator.toString();

@@ -1,5 +1,6 @@
 import type { NumberDisplay } from '../math/rational';
 import { formatRational, Rational } from '../math/rational';
+import { useLanguage } from '../app/languageContext';
 
 interface NumberValueProps {
   value: Rational;
@@ -7,8 +8,10 @@ interface NumberValueProps {
 }
 
 export function NumberValue({ value, display }: NumberValueProps) {
+  const { language } = useLanguage();
   if (display.mode === 'decimal' || value.denominator === 1n) {
-    return <span className="number-value integer-value">{formatRational(value, display)}</span>;
+    const formatted = formatRational(value, display);
+    return <span className="number-value integer-value">{language === 'ru' ? formatted.replace('.', ',') : formatted}</span>;
   }
   const negative = value.numerator < 0n;
   const numerator = negative ? -value.numerator : value.numerator;

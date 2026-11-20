@@ -1,3 +1,5 @@
+import type { LanguagePreference } from './i18n';
+
 export type Theme = 'light' | 'dark' | 'system';
 
 export type ShortcutAction =
@@ -17,6 +19,7 @@ export type ShortcutAction =
 
 export interface AppSettings {
   theme: Theme;
+  language: LanguagePreference;
   tableFontSize: number;
   uiScale: number;
   showPivotHints: boolean;
@@ -41,6 +44,7 @@ export const shortcutLabels: Record<ShortcutAction, string> = {
 
 export const defaultSettings: AppSettings = {
   theme: 'system',
+  language: 'system',
   tableFontSize: 18,
   uiScale: 100,
   showPivotHints: false,
@@ -77,8 +81,10 @@ export function loadSettings(): AppSettings {
     return {
       ...defaultSettings,
       ...stored,
-      tableFontSize: clamp(Number(stored.tableFontSize ?? defaultSettings.tableFontSize), 12, 30),
-      uiScale: clamp(Number(stored.uiScale ?? defaultSettings.uiScale), 75, 150),
+      language: stored.language === 'en' || stored.language === 'ru' ? stored.language : 'system',
+      theme: stored.theme === 'light' || stored.theme === 'dark' ? stored.theme : 'system',
+      tableFontSize: clamp(stored.tableFontSize, defaultSettings.tableFontSize, 12, 30),
+      uiScale: clamp(stored.uiScale, defaultSettings.uiScale, 75, 150),
       showPivotHints: stored.showPivotHints === true,
       shortcuts: { ...defaultSettings.shortcuts, ...storedShortcuts },
     };
@@ -121,6 +127,6 @@ function keyFromCode(code: string): string | null {
   return keys[code] ?? null;
 }
 
-function clamp(value: number, minimum: number, maximum: number): number {
-  return Math.min(maximum, Math.max(minimum, value));
+function clamp(value: number | undefined, fallback: number, minimum: number, maximum: number): number {
+  return typeof value === 'number' && Number.isFinite(value) ? Math.min(maximum, Math.max(minimum, value)) : fallback;
 }

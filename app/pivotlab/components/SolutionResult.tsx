@@ -1,37 +1,38 @@
+import { useLanguage } from '../app/languageContext';
 import type { NumberDisplay } from '../math/rational';
-import { formatSolutionResult, getSolutionResult } from '../model/result';
-import type { Tableau } from '../model/tableau';
+import { analysisMessages, getSolutionResult } from '../model/result';
+import { analyzeTableau, type Tableau, type TableauAnalysis } from '../model/tableau';
 import { NumberValue } from './NumberValue';
+import { VariableName } from './VariableName';
 
 interface SolutionResultProps {
   tableau: Tableau;
   display: NumberDisplay;
+  analysis?: TableauAnalysis;
 }
 
-export function SolutionResult({ tableau, display }: SolutionResultProps) {
-  const result = getSolutionResult(tableau);
+export function SolutionResult({ tableau, display, analysis = analyzeTableau(tableau) }: SolutionResultProps) {
+  const { t } = useLanguage();
+  const result = analysis === 'optimal' || analysis === 'feasible' ? getSolutionResult(tableau) : null;
   return (
-    <section className="solution-result" aria-label={formatSolutionResult(tableau, display)}>
-      <span className="solution-result-label">Final result</span>
-      <div className="solution-result-equation">
+    <section className="solution-result">
+      <h3 className="solution-result-label">{t(analysis === 'optimal' ? 'Optimal result' : 'Current result')}</h3>
+      <p>{t(analysisMessages[analysis])}</p>
+      {result && <div className="solution-result-equation">
         <strong className="solution-objective-symbol">
           <span>{result.objectiveName}</span>
-          <span className="solution-min-index">min</span>
+          {analysis === 'optimal' && <sub className="solution-min-index">min</sub>}
         </strong>
         <span>=</span>
         <strong><NumberValue value={result.objectiveValue} display={display} /></strong>
-        <span>at</span>
-        <span className="solution-result-point">
-          <span>(</span>
-          {result.values.map(({ variable, value }, index) => (
-            <span key={variable.id} className="solution-result-coordinate">
-              {index > 0 && <span>,&nbsp;</span>}
-              <NumberValue value={value} display={display} />
-            </span>
+        {result.values.length > 0 && <ul className="solution-result-point">
+          {result.values.map(({ variable, value }) => (
+            <li key={variable.id} className="solution-result-coordinate">
+              <VariableName name={variable.name} /> = <NumberValue value={value} display={display} />
+            </li>
           ))}
-          <span>)</span>
-        </span>
-      </div>
+        </ul>}
+      </div>}
     </section>
   );
 }

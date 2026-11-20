@@ -1,14 +1,19 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { AppError, errorText, resolveLanguage, safeFilename, tableauTitle, translate } from './app/i18n';
+import { LanguageContext } from './app/languageContext';
 import { loadSettings, shortcutFromEvent, type AppSettings, type ShortcutAction } from './app/settings';
 import type { NumberDisplay } from './math/rational';
 import {
   addConstraint,
   addVariable,
+  analyzeTableau,
+  canonicalizeObjective,
   createBlankTableau,
   createTextbookExample,
   detectBasis,
+  describeHistoryEntry,
   finishPhaseOne,
   makeId,
   pivotTableau,
@@ -47,11 +52,10 @@ import {
 import { EditInspector, PivotInspector } from './components/Inspector';
 import { downloadText, ExportModal, NewProjectModal, PhaseOneModal, SettingsModal } from './components/Modals';
 import { TableauGrid } from './components/TableauGrid';
+import { SolutionResult } from './components/SolutionResult';
 
 type View = 'workspace' | 'history';
 type ModalName = 'new' | 'phase1' | 'settings' | 'export' | null;
-const DEFAULT_EXAMPLE_VERSION = '7.4.1';
-
 interface InstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
@@ -60,12 +64,7 @@ interface InstallPromptEvent extends Event {
 function initialSession(): { history: HistoryEntry[]; currentIndex: number } {
   try {
     const stored = localStorage.getItem('pivotlab-autosave');
-    if (stored) {
-      const loaded = deserializeProject(stored);
-      const defaultVersion = localStorage.getItem('pivotlab-default-example-version');
-      localStorage.setItem('pivotlab-default-example-version', DEFAULT_EXAMPLE_VERSION);
-      if (defaultVersion === DEFAULT_EXAMPLE_VERSION || !isLegacyTextbookSession(loaded)) return loaded;
-    }
+    if (stored) return deserializeProject(stored);
   } catch {
     // A clean example is safer than blocking startup on a damaged autosave.
   }
@@ -76,18 +75,10 @@ function initialSession(): { history: HistoryEntry[]; currentIndex: number } {
   };
 }
 
-function isLegacyTextbookSession(session: { history: HistoryEntry[] }): boolean {
-  const tableau = session.history[0]?.tableau;
-  if (!tableau || tableau.title !== 'Example 3.6.1' || tableau.rows.length !== 2 || tableau.variables.length !== 5) return false;
-  return tableau.rows[0]?.values.map((value) => value.toFraction()).join(',') === '3,7,3,1,0,10'
-    && tableau.rows[1]?.values.map((value) => value.toFraction()).join(',') === '2,2,6,0,1,4'
-    && tableau.objective.map((value) => value.toFraction()).join(',') === '-60,-84,-72,0,0,0';
-}
-
 function initialDisplay(): NumberDisplay {
   try {
     const stored = JSON.parse(localStorage.getItem('pivotlab-display') ?? '{}') as Partial<NumberDisplay>;
-    if (stored.mode === 'decimal') return { mode: 'decimal', precision: Math.max(0, Math.min(8, Number(stored.precision ?? 3))) };
+    if (stored.mode === 'decimal') return { mode: 'decimal', precision: Number.isInteger(stored.precision) ? Math.max(0, Math.min(8, stored.precision!)) : 3 };
   } catch {
     // Use exact fractions.
   }
@@ -106,7 +97,10 @@ export default function App() {
   const [view, setView] = useState<View>('workspace');
   const [display, setDisplay] = useState<NumberDisplay>(initialDisplay);
   const [selection, setSelection] = useState<PivotSelection | null>(null);
+  const [hoverSelection, setHoverSelection] = useState<PivotSelection | null>(null);
   const [settings, setSettings] = useState<AppSettings>(loadSettings);
+  const [browserLanguages, setBrowserLanguages] = useState(() => typeof navigator === 'undefined' ? [] : navigator.languages ?? [navigator.language]);
+  const [compactLayout, setCompactLayout] = useState(false);
   const [modal, setModal] = useState<ModalName>(null);
   const [includePrintResult, setIncludePrintResult] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
@@ -119,6 +113,32 @@ export default function App() {
   const noticeTimer = useRef<number | null>(null);
   const current = history[currentIndex].tableau;
   const canEdit = currentIndex === 0;
+  const language = resolveLanguage(settings.language, browserLanguages);
+  const locale = useMemo(() => ({ language, t: translate.bind(null, language) }), [language]);
+  const { t } = locale;
+  const activeSelection = selection ?? hoverSelection;
+  const analysis = useMemo(() => analyzeTableau(current), [current]);
+  const clearPivot = () => { setSelection(null); setHoverSelection(null); };
+
+  useEffect(() => {
+    const updateLanguage = () => setBrowserLanguages(navigator.languages ?? [navigator.language]);
+    window.addEventListener('languagechange', updateLanguage);
+    return () => window.removeEventListener('languagechange', updateLanguage);
+  }, []);
+
+  useLayoutEffect(() => { document.documentElement.lang = language; }, [language]);
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 700px), (max-width: 960px) and (pointer: coarse)');
+    const update = () => setCompactLayout(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
+  useEffect(() => () => {
+    if (noticeTimer.current !== null) window.clearTimeout(noticeTimer.current);
+  }, []);
 
   const showNotice = (message: string) => {
     setNotice(message);
@@ -135,11 +155,11 @@ export default function App() {
   }, [problemHistory]);
 
   useEffect(() => {
-    localStorage.setItem('pivotlab-display', JSON.stringify(display));
+    try { localStorage.setItem('pivotlab-display', JSON.stringify(display)); } catch { /* Storage is optional. */ }
   }, [display]);
 
   useEffect(() => {
-    localStorage.setItem('pivotlab-settings', JSON.stringify(settings));
+    try { localStorage.setItem('pivotlab-settings', JSON.stringify(settings)); } catch { /* Storage is optional. */ }
     const root = document.documentElement;
     const interfaceScale = settings.uiScale / 100;
     root.dataset.theme = settings.theme;
@@ -167,7 +187,7 @@ export default function App() {
       next[currentIndex] = { ...next[currentIndex], tableau };
       return next;
     });
-    setSelection(null);
+    clearPivot();
   };
 
   const commit = (tableau: Tableau, label: string, pivot?: HistoryEntry['pivot']) => {
@@ -177,7 +197,7 @@ export default function App() {
     ];
     setHistory(next);
     setCurrentIndex(next.length - 1);
-    setSelection(null);
+    clearPivot();
   };
 
   const archiveCurrentProblem = (excludingId?: string) => {
@@ -194,24 +214,24 @@ export default function App() {
     setCurrentIndex(0);
     setEditHistory([tableau]);
     setEditIndex(0);
-    setSelection(null);
+    clearPivot();
     setView('workspace');
     setMode('edit');
   };
 
   const safely = (operation: () => void) => {
-    try { operation(); } catch (caught) { showNotice(caught instanceof Error ? caught.message : 'The operation could not be completed.'); }
+    try { operation(); } catch (caught) { showNotice(errorText(t, caught, 'The operation could not be completed.')); }
   };
 
-  const applyPivot = (requestedPivot: PivotSelection | null = selection) => safely(() => {
-    if (!requestedPivot) throw new Error('Hover over a nonzero pivot element first.');
+  const applyPivot = (requestedPivot: PivotSelection | null = activeSelection) => safely(() => {
+    if (!requestedPivot) throw new AppError('Select a nonzero pivot element first.');
     const rowIndex = current.rows.findIndex((row) => row.id === requestedPivot.rowId);
     const columnIndex = current.variables.findIndex((variable) => variable.id === requestedPivot.variableId);
-    if (rowIndex < 0 || columnIndex < 0) throw new Error('The selected pivot is no longer present.');
+    if (rowIndex < 0 || columnIndex < 0) throw new AppError('The selected pivot is no longer present.');
     const result = pivotTableau(current, rowIndex, columnIndex);
     const stepNumber = currentIndex + 1;
     commit(result.tableau, `Pivot ${stepNumber}: ${result.record.enteringName} enters`, result.record);
-    showNotice(`Pivot applied exactly at ${result.record.pivotValue}.`);
+    showNotice(t('Pivot applied exactly at {value}.', { value: result.record.pivotValue }));
   });
 
   const previousStep = () => {
@@ -221,12 +241,12 @@ export default function App() {
       const tableau = editHistory[nextIndex];
       setEditIndex(nextIndex);
       setHistory((previous) => [{ ...previous[0], tableau }]);
-      setSelection(null);
+      clearPivot();
       return;
     }
     if (currentIndex <= 0) return;
     setCurrentIndex((index) => index - 1);
-    setSelection(null);
+    clearPivot();
   };
   const nextStep = () => {
     if (mode === 'edit' && canEdit) {
@@ -235,28 +255,28 @@ export default function App() {
       const tableau = editHistory[nextIndex];
       setEditIndex(nextIndex);
       setHistory((previous) => [{ ...previous[0], tableau }]);
-      setSelection(null);
+      clearPivot();
       return;
     }
     if (currentIndex >= history.length - 1) return;
     setMode('pivot');
     setCurrentIndex((index) => index + 1);
-    setSelection(null);
+    clearPivot();
   };
 
   const enterEditMode = () => {
     if (!canEdit) {
-      showNotice('Edit mode is available only for the initial tableau.');
+      showNotice(t('Edit mode is available only for the initial tableau.'));
       return;
     }
     setMode('edit');
     setView('workspace');
-    setSelection(null);
+    clearPivot();
   };
 
   const saveProject = () => {
-    downloadText(`${safeName(current.title)}.simplex-assistant.json`, serializeProject(history, currentIndex));
-    showNotice('Project saved.');
+    downloadText(`${safeFilename(tableauTitle(t, current.title))}.simplex-assistant.json`, serializeProject(history, currentIndex));
+    showNotice(t('Project saved.'));
   };
 
   const shortcutHandlers: Record<ShortcutAction, () => void> = {
@@ -264,7 +284,7 @@ export default function App() {
       if (mode === 'edit') {
         setMode('pivot');
         setView('workspace');
-        setSelection(null);
+        clearPivot();
       } else {
         enterEditMode();
       }
@@ -277,7 +297,7 @@ export default function App() {
     saveProject,
     addConstraint: () => {
       if (!canEdit) {
-        showNotice('Constraints can be added only to the initial tableau.');
+        showNotice(t('Constraints can be added only to the initial tableau.'));
         return;
       }
       enterEditMode();
@@ -285,7 +305,7 @@ export default function App() {
     },
     addVariable: () => {
       if (!canEdit) {
-        showNotice('Variables can be added only to the initial tableau.');
+        showNotice(t('Variables can be added only to the initial tableau.'));
         return;
       }
       enterEditMode();
@@ -315,12 +335,9 @@ export default function App() {
         setModal(null);
         return;
       }
-      const isEditing = target?.matches('input, textarea, select, [contenteditable="true"]');
-      const editTimelineAction = mode === 'edit' && (action === 'undo' || action === 'redo');
-      if (isEditing && action !== 'addConstraint' && action !== 'addVariable' && !editTimelineAction) return;
+      if (event.isComposing || target?.matches('input, textarea, select, [contenteditable="true"]')) return;
       event.preventDefault();
       event.stopPropagation();
-      if (isEditing) target?.blur();
       shortcutHandlers[action]();
     };
     window.addEventListener('keydown', onKeyDown, { capture: true });
@@ -329,7 +346,7 @@ export default function App() {
 
   const openProject = async (file: File) => {
     if (!file.name.toLowerCase().endsWith('.json')) {
-      showNotice('Choose a Simplex Assistant .json project file.');
+      showNotice(t('Choose a Simplex Assistant .json project file.'));
       return;
     }
     try {
@@ -339,12 +356,12 @@ export default function App() {
       setCurrentIndex(loaded.currentIndex);
       setEditHistory([loaded.history[0].tableau]);
       setEditIndex(0);
-      setSelection(null);
+      clearPivot();
       setView('workspace');
       setMode(loaded.currentIndex > 0 ? 'pivot' : 'edit');
-      showNotice('Project opened.');
+      showNotice(t('Project opened.'));
     } catch (caught) {
-      showNotice(caught instanceof Error ? caught.message : 'The project could not be opened.');
+      showNotice(errorText(t, caught, 'The project could not be opened.'));
     }
   };
 
@@ -355,258 +372,284 @@ export default function App() {
     setCurrentIndex(loaded.currentIndex);
     setEditHistory([loaded.history[0].tableau]);
     setEditIndex(0);
-    setSelection(null);
+    clearPivot();
     setView('workspace');
     setMode(loaded.currentIndex > 0 ? 'pivot' : 'edit');
-    showNotice(`${record.title} restored from local history.`);
+    showNotice(t('{title} restored from local history.', { title: tableauTitle(t, record.title) }));
   });
 
   const numberMode = display.mode;
-  const tableauStages = groupTableauStages(history, currentIndex);
+  const tableauStages = useMemo(() => groupTableauStages(history, currentIndex), [history, currentIndex]);
+  const selectedRow = selection ? current.rows.findIndex((row) => row.id === selection.rowId) : -1;
+  const selectedColumn = selection ? current.variables.findIndex((variable) => variable.id === selection.variableId) : -1;
 
   return (
-    <div className={`app-shell${view === 'workspace' ? ' workspace-open' : ''}`}>
-      <header className="topbar">
-        <div className="brand-block">
-          <div className="brand-mark"><GridIcon /></div>
-          <div><strong>Simplex Assistant</strong><span>Manual pivot practice</span></div>
-        </div>
-        <div className="document-title">
-          {mode === 'edit' ? (
-            <input
-              value={current.title}
-              aria-label="Tableau title"
-              onChange={(event) => {
-                const next = { ...current, title: event.target.value };
-                replaceCurrent(next);
-              }}
-            />
-          ) : <strong>{current.title}</strong>}
-          <span>saved locally</span>
-        </div>
-        <div className="topbar-actions">
-          {installPrompt && <button className="secondary-button install-button" type="button" onClick={async () => {
-            await installPrompt.prompt();
-            await installPrompt.userChoice;
-            setInstallPrompt(null);
-          }}>Install app</button>}
-          <button className="icon-button labeled" type="button" onClick={() => setModal('new')} title={`New · ${settings.shortcuts.newProject}`}><PlusIcon /><span>New</span></button>
-          <button className="icon-button labeled" type="button" onClick={() => fileInput.current?.click()} title={`Open · ${settings.shortcuts.openProject}`}><FolderIcon /><span>Open</span></button>
-          <button className="icon-button labeled" type="button" onClick={saveProject} title={`Save · ${settings.shortcuts.saveProject}`}><SaveIcon /><span>Save</span></button>
-          <button className="icon-button" type="button" onClick={() => setModal((value) => value === 'export' ? null : 'export')} title={`Export · ${settings.shortcuts.toggleExport}`}><ExportIcon /></button>
-          <button className="icon-button" type="button" onClick={() => setModal((value) => value === 'settings' ? null : 'settings')} title={`Settings · ${settings.shortcuts.openSettings}`}><SettingsIcon /></button>
-        </div>
-      </header>
-
-      <nav className="commandbar" aria-label="Tableau controls">
-        <div className="segmented-control mode-control" aria-label="Mode">
-          <span
-            className={`disabled-edit-tip${canEdit ? '' : ' visible'}`}
-          >
-            <button
-              type="button"
-              className={mode === 'edit' ? 'active' : ''}
-              disabled={!canEdit}
-              aria-describedby={canEdit ? undefined : 'edit-disabled-tooltip'}
-              onClick={enterEditMode}
-            >Edit</button>
-            {!canEdit && <span id="edit-disabled-tooltip" className="control-tooltip" role="tooltip">Edit is available only before the first pivot. Return to the initial tableau to change the problem.</span>}
-          </span>
-          <button type="button" className={mode === 'pivot' ? 'active' : ''} onClick={() => { setMode('pivot'); setView('workspace'); }}>Pivot</button>
-        </div>
-        <div className="command-divider" />
-        <div className="segmented-control view-control" aria-label="View">
-          <button type="button" className={view === 'workspace' ? 'active' : ''} onClick={() => setView('workspace')}><GridIcon /> Tableau</button>
-          <button type="button" className={view === 'history' ? 'active' : ''} onClick={() => setView('history')}><HistoryIcon /> History <span className="count-pill">{problemHistory.length}</span></button>
-        </div>
-        <div className="command-divider" />
-        <div className="segmented-control compact-control" aria-label="Algorithm">
-          <button type="button" className={algorithm === 'primal' ? 'active' : ''} onClick={() => { setAlgorithm('primal'); setSelection(null); }}>Primal</button>
-          <button type="button" className={algorithm === 'dual' ? 'active' : ''} title="Uses c[j] / a[i,j] ratio guidance; the pivot row operation is unchanged" onClick={() => { setAlgorithm('dual'); setSelection(null); }}>Dual</button>
-        </div>
-        <div className="command-spacer" />
-        <div className="display-control">
-          <span>Display</span>
-          <div className="segmented-control compact-control">
-            <button type="button" className={numberMode === 'fraction' ? 'active' : ''} onClick={() => setDisplay({ mode: 'fraction' })}>
-              <span className="display-fraction-sample" aria-label="Fractions">1/2</span>
-            </button>
-            <button type="button" className={numberMode === 'decimal' ? 'active' : ''} onClick={() => setDisplay({ mode: 'decimal', precision: display.mode === 'decimal' ? display.precision : 3 })}>0.50</button>
+    <LanguageContext.Provider value={locale}>
+      <div className={`app-shell${view === 'workspace' ? ' workspace-open' : ''}${mode === 'edit' ? ' editing' : ''}`}>
+        <header className="topbar">
+          <div className="brand-block">
+            <div className="brand-mark"><GridIcon /></div>
+            <div><strong>Simplex Assistant</strong><span>{t('Manual pivot practice')}</span></div>
           </div>
-          <span className={`decimal-places-slot${display.mode === 'decimal' ? ' visible' : ''}`} aria-hidden={display.mode !== 'decimal'}>
-            <select aria-label="Decimal places" disabled={display.mode !== 'decimal'} tabIndex={display.mode === 'decimal' ? 0 : -1} value={display.mode === 'decimal' ? display.precision : 3} onChange={(event) => setDisplay({ mode: 'decimal', precision: Number(event.target.value) })}>
-              {Array.from({ length: 9 }, (_, index) => <option key={index} value={index}>{index} decimals</option>)}
-            </select>
-          </span>
-        </div>
-        <div className="undo-controls">
-          <button className="icon-button" type="button" disabled={mode === 'edit' ? editIndex === 0 : currentIndex === 0} onClick={previousStep} title={`${mode === 'edit' ? 'Undo edit' : 'Previous tableau'} · ${settings.shortcuts.undo}`}><UndoIcon /></button>
-          <span>{mode === 'edit' ? `${editIndex + 1} / ${editHistory.length}` : `${currentIndex + 1} / ${history.length}`}</span>
-          <button className="icon-button" type="button" disabled={mode === 'edit' ? editIndex === editHistory.length - 1 : currentIndex === history.length - 1} onClick={nextStep} title={`${mode === 'edit' ? 'Redo edit' : 'Next tableau'} · ${settings.shortcuts.redo}`}><RedoIcon /></button>
-        </div>
-      </nav>
+          <div className="document-title">
+            {mode === 'edit' ? (
+              <input
+                value={tableauTitle(t, current.title)}
+                aria-label={t('Tableau title')}
+                onChange={(event) => {
+                  const next = { ...current, title: event.target.value };
+                  replaceCurrent(next);
+                }}
+              />
+            ) : <strong>{tableauTitle(t, current.title)}</strong>}
+            <span>{t('saved locally')}</span>
+          </div>
+          <div className="topbar-actions">
+            {installPrompt && <button className="secondary-button install-button" type="button" onClick={async () => {
+              await installPrompt.prompt();
+              await installPrompt.userChoice;
+              setInstallPrompt(null);
+            }}>{t('Install app')}</button>}
+            <button className="icon-button labeled" type="button" aria-label={t('New')} onClick={() => setModal('new')} title={`${t('New')} · ${settings.shortcuts.newProject}`}><PlusIcon /><span>{t('New')}</span></button>
+            <button className="icon-button labeled" type="button" aria-label={t('Open')} onClick={() => fileInput.current?.click()} title={`${t('Open')} · ${settings.shortcuts.openProject}`}><FolderIcon /><span>{t('Open')}</span></button>
+            <button className="icon-button labeled" type="button" aria-label={t('Save')} onClick={saveProject} title={`${t('Save')} · ${settings.shortcuts.saveProject}`}><SaveIcon /><span>{t('Save')}</span></button>
+            <button className="icon-button" type="button" aria-label={t('Export')} onClick={() => setModal('export')} title={`${t('Export')} · ${settings.shortcuts.toggleExport}`}><ExportIcon /></button>
+            <button className="icon-button" type="button" aria-label={t('Settings')} onClick={() => setModal('settings')} title={`${t('Settings')} · ${settings.shortcuts.openSettings}`}><SettingsIcon /></button>
+          </div>
+        </header>
 
-      {view === 'workspace' ? (
-        <main className="workspace-layout">
-          {mode === 'edit' && canEdit ? (
-            <EditInspector
-              tableau={current}
-              onAddConstraint={() => replaceCurrent(addConstraint(current))}
-              onAddVariable={() => replaceCurrent(addVariable(current))}
-              onDetectBasis={() => { replaceCurrent(detectBasis(current)); showNotice('Identity columns assigned to the basis.'); }}
-              onOpenPhaseOne={() => setModal('phase1')}
-              addConstraintShortcut={settings.shortcuts.addConstraint}
-              addVariableShortcut={settings.shortcuts.addVariable}
-              onFinishPhaseOne={() => safely(() => {
-                const next = finishPhaseOne(current);
-                commit(next, 'Original objective restored');
-                setMode('pivot');
-                showNotice('Phase I complete. The original objective row is canonical in the current basis.');
-              })}
-            />
-          ) : (
-            <PivotInspector
-              tableau={current}
-              algorithm={algorithm}
-              display={display}
-              selection={selection}
-              showPivotHints={settings.showPivotHints}
-              onFinishPhaseOne={() => safely(() => {
-                const next = finishPhaseOne(current);
-                commit(next, 'Original objective restored');
-                showNotice('Phase I complete. The original objective row is canonical in the current basis.');
-              })}
-            />
-          )}
-          <section className="tableau-card">
-            <header className="tableau-card-header">
-              <div>
-                <span className="eyebrow">Simplex method tableau</span>
-                <h1>{current.title}</h1>
-              </div>
-              <div className="tableau-meta">
-                <span>{current.rows.length} {current.rows.length === 1 ? 'constraint' : 'constraints'}, {current.variables.length} {current.variables.length === 1 ? 'variable' : 'variables'}</span>
-                {current.phase === 'phase1' && <span className="status-badge amber">Phase I · −w</span>}
-              </div>
-            </header>
-            <div className="tableau-sequence">
-              {tableauStages.map((stage) => (
-                <section className="tableau-stage" key={stage.id} aria-label={stage.label ?? 'Simplex tableau'}>
-                  {stage.label && <header className="tableau-stage-heading"><strong>{stage.label}</strong></header>}
-                  <div className="tableau-stage-steps">
-                    {stage.entries.map(({ entry, index }, stageIndex) => {
-                      const isCurrent = index === currentIndex;
-                      const stepDescription = entry.pivot
-                        ? `${entry.label}. ${entry.pivot.enteringName} entered, ${entry.pivot.leavingName} left; pivot ${entry.pivot.pivotValue}.`
-                        : entry.label;
-                      return (
-                        <article
-                          key={entry.id}
-                          className={`tableau-step${isCurrent ? ' current' : ''}`}
-                          aria-label={`Step ${index}. ${stepDescription}`}
-                        >
-                          <TableauGrid
-                            tableau={entry.tableau}
-                            mode={isCurrent && index === 0 ? mode : 'pivot'}
-                            algorithm={algorithm}
-                            display={display}
-                            showPivotHints={settings.showPivotHints}
-                            tableFontSize={settings.tableFontSize}
-                            selection={isCurrent ? selection : null}
-                            compact={!isCurrent}
-                            showHeader={stageIndex === 0}
-                            pivotMark={index < currentIndex ? history[index + 1]?.pivot : undefined}
-                            onPivot={isCurrent && mode === 'pivot' ? applyPivot : undefined}
-                            onHoverPivot={isCurrent && mode === 'pivot' ? setSelection : undefined}
-                            onChange={isCurrent && index === 0 ? replaceCurrent : undefined}
-                            onRemoveVariable={isCurrent && index === 0 ? (id) => safely(() => replaceCurrent(removeVariable(current, id))) : undefined}
-                            onRemoveConstraint={isCurrent && index === 0 ? (id) => safely(() => replaceCurrent(removeConstraint(current, id))) : undefined}
-                          />
-                        </article>
-                      );
-                    })}
-                  </div>
-                </section>
-              ))}
+        <nav className="commandbar" aria-label={t('Tableau controls')}>
+          <div className="segmented-control mode-control" aria-label={t('Mode')}>
+            <span
+              className={`disabled-edit-tip${canEdit ? '' : ' visible'}`}
+            >
+              <button
+                type="button"
+                className={mode === 'edit' ? 'active' : ''}
+                disabled={!canEdit}
+                aria-describedby={canEdit ? undefined : 'edit-disabled-tooltip'}
+                onClick={enterEditMode}
+              >{t('Edit')}</button>
+              {!canEdit && <span id="edit-disabled-tooltip" className="control-tooltip" role="tooltip">{t('Edit is available only before the first pivot. Return to the initial tableau to change the problem.')}</span>}
+            </span>
+            <button type="button" className={mode === 'pivot' ? 'active' : ''} onClick={() => { setMode('pivot'); setView('workspace'); }}>{t('Pivot')}</button>
+          </div>
+          <div className="command-divider" />
+          <div className="segmented-control view-control" aria-label={t('View')}>
+            <button type="button" className={view === 'workspace' ? 'active' : ''} onClick={() => setView('workspace')}><GridIcon /> {t('Tableau')}</button>
+            <button type="button" className={view === 'history' ? 'active' : ''} onClick={() => setView('history')}><HistoryIcon /> {t('History')} <span className="count-pill">{problemHistory.length}</span></button>
+          </div>
+          <div className="command-divider" />
+          <div className="segmented-control compact-control algorithm-control" aria-label={t('Algorithm')}>
+            <button type="button" className={algorithm === 'primal' ? 'active' : ''} onClick={() => { setAlgorithm('primal'); clearPivot(); }}>{t('Primal')}</button>
+            <button type="button" className={algorithm === 'dual' ? 'active' : ''} title={t('Uses c[j] / a[i,j] ratio guidance; the pivot row operation is unchanged')} onClick={() => { setAlgorithm('dual'); clearPivot(); }}>{t('Dual')}</button>
+          </div>
+          <div className="command-spacer" />
+          <div className="display-control">
+            <span>{t('Display')}</span>
+            <div className="segmented-control compact-control">
+              <button type="button" className={numberMode === 'fraction' ? 'active' : ''} onClick={() => setDisplay({ mode: 'fraction' })}>
+                <span className="display-fraction-sample" aria-label={t('Fractions')}>1/2</span>
+              </button>
+              <button type="button" className={numberMode === 'decimal' ? 'active' : ''} onClick={() => setDisplay({ mode: 'decimal', precision: display.mode === 'decimal' ? display.precision : 3 })} aria-label={t('Decimals')}>{language === 'ru' ? '0,50' : '0.50'}</button>
             </div>
-            {mode === 'edit' && canEdit && (
-              <footer className="tableau-card-footer">
-                <div><InfoIcon /><span>Press Enter to commit a cell. Use the arrow keys to move between cells.</span></div>
-              </footer>
+            <span className={`decimal-places-slot${display.mode === 'decimal' ? ' visible' : ''}`} aria-hidden={display.mode !== 'decimal'}>
+              <select aria-label={t('Decimal places')} disabled={display.mode !== 'decimal'} tabIndex={display.mode === 'decimal' ? 0 : -1} value={display.mode === 'decimal' ? display.precision : 3} onChange={(event) => setDisplay({ mode: 'decimal', precision: Number(event.target.value) })}>
+                {Array.from({ length: 9 }, (_, index) => <option key={index} value={index}>{t('{count} decimals', { count: index })}</option>)}
+              </select>
+            </span>
+          </div>
+          <div className="undo-controls">
+            <button className="icon-button" type="button" disabled={mode === 'edit' ? editIndex === 0 : currentIndex === 0} onClick={previousStep} title={`${t(mode === 'edit' ? 'Undo edit' : 'Previous tableau')} · ${settings.shortcuts.undo}`}><UndoIcon /></button>
+            <span>{mode === 'edit' ? `${editIndex + 1} / ${editHistory.length}` : `${currentIndex + 1} / ${history.length}`}</span>
+            <button className="icon-button" type="button" disabled={mode === 'edit' ? editIndex === editHistory.length - 1 : currentIndex === history.length - 1} onClick={nextStep} title={`${t(mode === 'edit' ? 'Redo edit' : 'Next tableau')} · ${settings.shortcuts.redo}`}><RedoIcon /></button>
+          </div>
+        </nav>
+
+        {view === 'workspace' ? (
+          <main className="workspace-layout">
+            {mode === 'edit' && canEdit ? (
+              <EditInspector
+                tableau={current}
+                onAddConstraint={() => replaceCurrent(addConstraint(current))}
+                onAddVariable={() => replaceCurrent(addVariable(current))}
+                onDetectBasis={() => { replaceCurrent(detectBasis(current)); showNotice(t('Identity columns assigned to the basis.')); }}
+                onCanonicalize={() => safely(() => {
+                  replaceCurrent(canonicalizeObjective(current));
+                  showNotice(t('Basic objective coefficients are now zero.'));
+                })}
+                onOpenPhaseOne={() => setModal('phase1')}
+                addConstraintShortcut={settings.shortcuts.addConstraint}
+                addVariableShortcut={settings.shortcuts.addVariable}
+                onFinishPhaseOne={() => safely(() => {
+                  const next = finishPhaseOne(current);
+                  commit(next, 'Original objective restored');
+                  setMode('pivot');
+                  showNotice(t('Phase I complete. The original objective row is canonical in the current basis.'));
+                })}
+              />
+            ) : (
+              <PivotInspector
+                tableau={current}
+                algorithm={algorithm}
+                display={display}
+                selection={activeSelection}
+                showPivotHints={settings.showPivotHints}
+                result={<SolutionResult tableau={current} display={display} analysis={analysis} />}
+                onFinishPhaseOne={() => safely(() => {
+                  const next = finishPhaseOne(current);
+                  commit(next, 'Original objective restored');
+                  showNotice(t('Phase I complete. The original objective row is canonical in the current basis.'));
+                })}
+              />
             )}
-          </section>
-        </main>
-      ) : (
-        <main className="history-main">
-          <ProblemHistoryView
-            problems={problemHistory}
-            onOpen={resumeProblem}
-            onDelete={(id) => setProblemHistory((previous) => previous.filter((record) => record.id !== id))}
-          />
-        </main>
-      )}
+            <section className="tableau-card">
+              <header className="tableau-card-header">
+                <div>
+                  <span className="eyebrow">{t('Simplex method tableau')}</span>
+                  <h1>{tableauTitle(t, current.title)}</h1>
+                </div>
+                <div className="tableau-meta">
+                  <span>{t('Constraints: {rows} · Variables: {variables}', { rows: current.rows.length, variables: current.variables.length })}</span>
+                  {current.phase === 'phase1' && <span className="status-badge amber">{t('Phase I · −w')}</span>}
+                </div>
+              </header>
+              <div className="mobile-tableau-tools">
+                <p>{t('Swipe the table horizontally to see more columns.')}</p>
+                {mode === 'edit'
+                  ? <a href="#tableau-setup">{t('Tableau setup')}</a>
+                  : <a href="#pivot-result">{t('See the current result')}</a>}
+                {mode === 'pivot' && current.phase === 'phase1' && <a href="#phase-one-controls">{t('Phase I controls')}</a>}
+              </div>
+              {mode === 'pivot' && selectedRow >= 0 && selectedColumn >= 0 && (
+                <div className="pivot-confirmation">
+                  <span role="status">{t('{value} at row {row}, column {variable}', {
+                    value: current.rows[selectedRow].values[selectedColumn].toFraction(),
+                    row: selectedRow + 1,
+                    variable: current.variables[selectedColumn].name,
+                  })}</span>
+                  <button type="button" className="primary-button" onClick={() => applyPivot(selection)}>{t('Apply pivot')}</button>
+                  <button type="button" className="text-button" onClick={clearPivot}>{t('Clear selection')}</button>
+                </div>
+              )}
+              <div className="tableau-sequence">
+                {tableauStages.map((stage) => (!compactLayout || stage.entries.some(({ index }) => index === currentIndex)) && (
+                  <section className="tableau-stage" key={stage.id} aria-label={t(stage.label ?? 'Simplex tableau')}>
+                    {stage.label && <header className="tableau-stage-heading"><strong>{t(stage.label)}</strong></header>}
+                    <div className="tableau-stage-steps">
+                      {stage.entries.map(({ entry, index }, stageIndex) => {
+                        const isCurrent = index === currentIndex;
+                        if (compactLayout && !isCurrent) return null;
+                        const stepDescription = describeHistoryEntry(t, entry, index);
+                        return (
+                          <article
+                            key={entry.id}
+                            className={`tableau-step${isCurrent ? ' current' : ''}`}
+                            aria-label={t('Step {index}. {label}', { index, label: stepDescription })}
+                          >
+                            <TableauGrid
+                              tableau={entry.tableau}
+                              mode={isCurrent && index === 0 ? mode : 'pivot'}
+                              algorithm={algorithm}
+                              display={display}
+                              showPivotHints={settings.showPivotHints}
+                              tableFontSize={settings.tableFontSize}
+                              selection={isCurrent ? activeSelection : null}
+                              compact={!isCurrent}
+                              showHeader={stageIndex === 0}
+                              pivotMark={index < currentIndex ? history[index + 1]?.pivot : undefined}
+                              onPivot={isCurrent && mode === 'pivot' ? applyPivot : undefined}
+                              onHoverPivot={isCurrent && mode === 'pivot' ? setHoverSelection : undefined}
+                              onSelectPivot={isCurrent && mode === 'pivot' ? setSelection : undefined}
+                              onInvalid={showNotice}
+                              repeatHeader={isCurrent}
+                              onChange={isCurrent && index === 0 ? replaceCurrent : undefined}
+                              onRemoveVariable={isCurrent && index === 0 ? (id) => safely(() => replaceCurrent(removeVariable(current, id))) : undefined}
+                              onRemoveConstraint={isCurrent && index === 0 ? (id) => safely(() => replaceCurrent(removeConstraint(current, id))) : undefined}
+                            />
+                          </article>
+                        );
+                      })}
+                    </div>
+                  </section>
+                ))}
+              </div>
+              {mode === 'edit' && canEdit && (
+                <footer className="tableau-card-footer">
+                  <div><InfoIcon /><span>{t('Press Enter to commit a cell. Use the arrow keys to move between cells.')}</span></div>
+                </footer>
+              )}
+            </section>
+          </main>
+        ) : (
+          <main className="history-main">
+            <ProblemHistoryView
+              problems={problemHistory}
+              onOpen={resumeProblem}
+              onDelete={(id) => setProblemHistory((previous) => previous.filter((record) => record.id !== id))}
+            />
+          </main>
+        )}
 
-      <input ref={fileInput} className="visually-hidden" type="file" accept=".json,.pivotlab.json,.simplex-assistant.json,application/json" onChange={(event) => {
-        const file = event.target.files?.[0];
-        if (file) void openProject(file);
-        event.currentTarget.value = '';
-      }} />
+        <input ref={fileInput} className="visually-hidden" type="file" tabIndex={-1} aria-hidden="true" accept=".json,.pivotlab.json,.simplex-assistant.json,application/json" onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) void openProject(file);
+          event.currentTarget.value = '';
+        }} />
 
-      {modal === 'new' && <NewProjectModal
-        onClose={() => setModal(null)}
-        onCreate={(rows, variables, title) => { reset(createBlankTableau(rows, variables, title)); setModal(null); }}
-        onLoadExample={() => { reset(createTextbookExample()); setModal(null); }}
-      />}
-      {modal === 'phase1' && <PhaseOneModal tableau={current} onClose={() => setModal(null)} onStart={(rowIds) => safely(() => {
-        const next = startPhaseOne(current, rowIds);
-        commit(next, 'Phase I setup');
-        setMode('pivot');
-        setModal(null);
-        showNotice('Phase I tableau created. Choose pivots manually.');
-      })} />}
-      {modal === 'settings' && <SettingsModal settings={settings} onChange={setSettings} onClose={() => setModal(null)} />}
-      {modal === 'export' && <ExportModal
-        tableau={current}
-        history={history}
-        currentIndex={currentIndex}
-        display={display}
-        includeResult={includeExportResult}
-        onIncludeResultChange={setIncludeExportResult}
-        includeSolution={includeExportSolution}
-        onIncludeSolutionChange={setIncludeExportSolution}
-        onClose={() => setModal(null)}
-        onNotice={showNotice}
-        onPrintHistory={(includeResult, includeSolution) => {
-          setIncludePrintResult(includeResult);
-          setPrintCompleteSolution(includeSolution);
-          setIsPrinting(true);
-          window.setTimeout(() => {
-            window.addEventListener('afterprint', () => {
-              setIncludePrintResult(false);
-              setIsPrinting(false);
-            }, { once: true });
-            window.print();
-          }, 120);
-        }}
-      />}
-      {isPrinting && (
-        <div className="print-solution-record" aria-hidden="true">
-          <SolutionHistoryView
-            history={printCompleteSolution ? history : history.slice(0, 1)}
-            currentIndex={printCompleteSolution ? currentIndex : 0}
-            display={display}
-            tableFontSize={settings.tableFontSize}
-            includeResult={includePrintResult}
-            resultTableau={current}
-            onRestore={() => undefined}
-          />
-        </div>
-      )}
-      {notice && <div className="toast" role="status"><InfoIcon /><span>{notice}</span></div>}
-    </div>
+        {modal === 'new' && <NewProjectModal
+          onClose={() => setModal(null)}
+          onCreate={(rows, variables, title) => { reset(createBlankTableau(rows, variables, title)); setModal(null); }}
+          onLoadExample={() => { reset(createTextbookExample()); setModal(null); }}
+        />}
+        {modal === 'phase1' && <PhaseOneModal tableau={current} notice={notice} onClose={() => setModal(null)} onStart={(rowIds) => safely(() => {
+          const next = startPhaseOne(current, rowIds);
+          commit(next, 'Phase I setup');
+          setMode('pivot');
+          setModal(null);
+          showNotice(t('Phase I tableau created. Choose pivots manually.'));
+        })} />}
+        {modal === 'settings' && <SettingsModal settings={settings} onChange={setSettings} onClose={() => setModal(null)} />}
+        {modal === 'export' && <ExportModal
+          tableau={current}
+          history={history}
+          currentIndex={currentIndex}
+          display={display}
+          includeResult={includeExportResult}
+          onIncludeResultChange={setIncludeExportResult}
+          includeSolution={includeExportSolution}
+          onIncludeSolutionChange={setIncludeExportSolution}
+          onClose={() => setModal(null)}
+          onNotice={showNotice}
+          notice={notice}
+          onPrintHistory={(includeResult, includeSolution) => {
+            setIncludePrintResult(includeResult);
+            setPrintCompleteSolution(includeSolution);
+            setIsPrinting(true);
+            window.setTimeout(() => {
+              window.addEventListener('afterprint', () => {
+                setIncludePrintResult(false);
+                setIsPrinting(false);
+              }, { once: true });
+              window.print();
+            }, 120);
+          }}
+        />}
+        {isPrinting && (
+          <div className="print-solution-record" aria-hidden="true">
+            <SolutionHistoryView
+              history={printCompleteSolution ? history : history.slice(0, 1)}
+              currentIndex={printCompleteSolution ? currentIndex : 0}
+              display={display}
+              tableFontSize={settings.tableFontSize}
+              includeResult={includePrintResult}
+              resultTableau={current}
+              onRestore={() => undefined}
+            />
+          </div>
+        )}
+        {notice && !modal && <div className="toast" role="status"><InfoIcon /><span>{notice}</span></div>}
+      </div>
+    </LanguageContext.Provider>
   );
-}
-
-function safeName(value: string): string {
-  return value.trim().replace(/[^a-z0-9._-]+/gi, '-').replace(/^-|-$/g, '') || 'tableau';
 }

@@ -20,8 +20,8 @@ test('the 0.7.1 scrolling, explanations, and control fixes remain available', as
   assert.match(app, /className=\{`decimal-places-slot/);
   assert.match(css, /\.decimal-places-slot \{[^}]*width: 142px;[^}]*visibility: hidden;/s);
   assert.match(css, /\.app-shell\.workspace-open \{[^}]*overflow: hidden;/s);
-  assert.match(inspector, /In primal mode, the inspector shows/);
-  assert.match(inspector, /In dual mode, the inspector shows/);
+  assert.match(inspector, /In primal mode, compare RHS/);
+  assert.match(inspector, /In dual mode, compare c/);
   assert.match(modal, /Primal and dual mode explanations always remain visible/);
   assert.match(grid, /className="basis-select-display"/);
   assert.match(settings, /redo: 'Ctrl\+Y'/);

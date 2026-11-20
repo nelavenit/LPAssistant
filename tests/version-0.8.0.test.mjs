@@ -67,7 +67,7 @@ test('all text export scope, result, and number-display combinations are indepen
         for (const [name, exporter] of formats) {
           const output = exporter(history, 2, display, { completeSolution, includeResult });
           assert.equal(output.includes('Phase I'), completeSolution, `${name}: solution scope`);
-          assert.equal(output.includes('Final result'), includeResult, `${name}: result scope`);
+          assert.equal(output.includes('Current result'), includeResult, `${name}: result scope`);
           if (name !== 'LaTeX') {
             assert.equal(output.includes(display.mode === 'fraction' ? '1/3' : '0.333'), true, `${name}: number display`);
           }
@@ -94,7 +94,8 @@ test('SVG, PNG source, transparency, scope, result, and number display form a fu
           });
           assert.ok(graphic.width > 0 && graphic.height > 0);
           assert.equal(graphic.svg.includes('Phase I'), completeSolution);
-          assert.equal(graphic.svg.includes('>min</text>'), includeResult);
+          assert.equal(graphic.svg.includes('Assign a distinct unit column'), includeResult);
+          assert.equal(graphic.svg.includes('ₘᵢₙ'), false);
           assert.equal(graphic.svg.includes('fill="#ffffff"'), !transparent);
           combinations += 1;
         }
@@ -162,7 +163,7 @@ test('light and dark theme tokens, inspector art, controls, and print frames ret
     readFile(new URL('../README.md', import.meta.url), 'utf8'),
   ]);
 
-  assert.match(app, /<span className="display-fraction-sample" aria-label="Fractions">1\/2<\/span>/);
+  assert.match(app, /<span className="display-fraction-sample" aria-label=\{t\(["']Fractions["']\)\}>1\/2<\/span>/);
   assert.doesNotMatch(app, /display-fraction-slash/);
   assert.match(variableName, /className="variable-name"/);
   assert.match(inspector, /var\(--pivot-icon-field\)/);
@@ -172,7 +173,7 @@ test('light and dark theme tokens, inspector art, controls, and print frames ret
   assert.ok(contrast('#111111', '#f2f2f2') > 15);
   assert.doesNotMatch(grid, /row-actions-cell|row-actions-column/);
   assert.match(grid, /basis-row-remove/);
-  assert.match(modal, /<CopyIcon \/> Copy/);
+  assert.match(modal, /<CopyIcon \/> \{t\(["']Copy["']\)\}/);
   assert.match(modal, /Restore appearance defaults/);
   assert.match(modal, /Restore shortcut defaults/);
   assert.doesNotMatch(modal, /eyebrow="Start fresh"/);
@@ -193,7 +194,7 @@ test('release metadata and offline cache identify version 0.8.0', async () => {
   assert.match(lock, /"version": "0\.8\.0"/);
   assert.match(readme, /Simplex Assistant 0\.8\.0/);
   assert.match(modal, /Simplex Assistant 0\.8\.0/);
-  assert.match(worker, /simplex-assistant-shell-v12/);
+  assert.match(worker, /PAGES_RELEASE\?\.version/);
 });
 
 function contrast(first, second) {
