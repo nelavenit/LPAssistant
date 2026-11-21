@@ -32,12 +32,13 @@ function isTerminal(analysis: TableauAnalysis): boolean {
 function chooseLeavingRow(tableau: Tableau, entering: number): number | null {
   const ratios = primalEligibleRatios(tableau, entering);
   const columns = new Map(tableau.variables.map((variable, index) => [variable.id, index]));
+  const basisOrder = tableau.rows.map((row) => columns.get(row.basisId!)!);
   let leaving: number | null = null;
   ratios.forEach((ratio, index) => {
     if (!ratio) return;
     const comparison = leaving === null ? -1 : ratio.compare(ratios[leaving]!);
     // Bland's rule breaks ratio ties by the column of the basic variable.
-    if (comparison < 0 || (comparison === 0 && columns.get(tableau.rows[index].basisId!)! < columns.get(tableau.rows[leaving!].basisId!)!)) {
+    if (comparison < 0 || (comparison === 0 && basisOrder[index] < basisOrder[leaving!])) {
       leaving = index;
     }
   });

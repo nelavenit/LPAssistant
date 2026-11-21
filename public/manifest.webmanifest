@@ -1,7 +1,7 @@
 {
   "name": "LPAssistant: Simplex Assistant",
   "short_name": "Simplex Assistant",
-  "description": "A manual simplex tableau trainer with exact rational arithmetic.",
+  "description": "Manual and automatic simplex tableaux. Симплекс-таблицы с ручным и автоматическим решением.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

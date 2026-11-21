@@ -1,12 +1,21 @@
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useLanguage } from '../app/languageContext';
-import { useRef, useState } from 'react';
 import type { NumberDisplay } from '../math/rational';
 import type { Algorithm, AppMode, PivotRecord, PivotSelection, Tableau, VariableKind } from '../model/tableau';
-import { cloneTableau, minimumEligibleRow, ratioAt } from '../model/tableau';
+import { cloneTableau, maximumEligibleColumn, minimumEligibleRow } from '../model/tableau';
 import { CellInput } from './CellInput';
 import { ChevronIcon, TrashIcon } from './Icons';
 import { NumberValue } from './NumberValue';
 import { VariableName } from './VariableName';
+
+const variableKindHints: Record<VariableKind, string> = {
+  regular: 'Original variable',
+  slack: 'Slack variable',
+  artificial: 'Artificial variable',
+  'split-positive': 'Positive part of unrestricted variable',
+  'split-negative': 'Negative part of unrestricted variable',
+};
 
 interface TableauGridProps {
   tableau: Tableau;
@@ -52,13 +61,20 @@ export function TableauGrid({
   const { t } = useLanguage();
   const pointerType = useRef('');
   const [hovered, setHovered] = useState<{ row: number; column: number } | null>(null);
+  const [variableTip, setVariableTip] = useState<{ id: string; text: string; left: number; top: number } | null>(null);
+  const variableTipTimer = useRef<number | null>(null);
   const selectedColumn = selection
     ? tableau.variables.findIndex((variable) => variable.id === selection.variableId)
+    : -1;
+  const selectedRow = selection
+    ? tableau.rows.findIndex((row) => row.id === selection.rowId)
     : -1;
   const minimumRow = showPivotHints && selectedColumn >= 0 && algorithm === 'primal'
     ? minimumEligibleRow(tableau, selectedColumn)
     : null;
-  const minimumRatio = minimumRow === null ? null : ratioAt(tableau, minimumRow, selectedColumn, algorithm);
+  const maximumColumn = showPivotHints && selectedRow >= 0 && algorithm === 'dual'
+    ? maximumEligibleColumn(tableau, selectedRow)
+    : null;
   const editable = mode === 'edit' && Boolean(onChange) && !compact;
   const variableWidth = Math.max(82, Math.min(148, Math.round(tableFontSize * 5.1)));
   const sideWidth = Math.max(editable ? 120 : 88, Math.min(140, Math.round(tableFontSize * 5)));
@@ -70,6 +86,45 @@ export function TableauGrid({
     mutator(next);
     onChange(next);
   };
+
+  const closeVariableTip = () => {
+    if (variableTipTimer.current !== null) window.clearTimeout(variableTipTimer.current);
+    variableTipTimer.current = null;
+    setVariableTip(null);
+  };
+
+  const openVariableTip = (header: HTMLElement, variableId: string, text: string, delayed: boolean) => {
+    if (variableTipTimer.current !== null) window.clearTimeout(variableTipTimer.current);
+    const reveal = () => {
+      const marker = header.querySelector<HTMLElement>('.variable-kind-marker');
+      if (!marker) return;
+      const bounds = marker.getBoundingClientRect();
+      setVariableTip({
+        id: variableId,
+        text: t(text),
+        left: bounds.left + bounds.width / 2,
+        // Keeping the portal below every marker prevents the split + sign from
+        // touching the pointer while preserving one tooltip level for all kinds.
+        top: bounds.bottom + 10,
+      });
+      variableTipTimer.current = null;
+    };
+    if (delayed) variableTipTimer.current = window.setTimeout(reveal, 350);
+    else reveal();
+  };
+
+  useEffect(() => {
+    if (!variableTip) return undefined;
+    // A fixed portal cannot follow a scrolling tableau without remeasurement;
+    // dismissing it is less surprising than leaving it detached from its mark.
+    const dismiss = () => closeVariableTip();
+    window.addEventListener('scroll', dismiss, true);
+    window.addEventListener('resize', dismiss);
+    return () => {
+      window.removeEventListener('scroll', dismiss, true);
+      window.removeEventListener('resize', dismiss);
+    };
+  }, [variableTip]);
 
   return (
     <div
@@ -97,7 +152,29 @@ export function TableauGrid({
                 <th
                   key={variable.id}
                   className={`${hovered?.column === columnIndex ? 'column-hover' : ''} variable-header variable-${variable.kind}`}
+                  tabIndex={editable ? undefined : 0}
+                  aria-describedby={editable ? undefined : `variable-kind-tip-${variable.id}`}
+                  onMouseEnter={(event) => {
+                    if (!editable) openVariableTip(event.currentTarget, variable.id, variableKindHints[variable.kind], true);
+                  }}
+                  onMouseLeave={closeVariableTip}
+                  onFocus={(event) => {
+                    if (!editable) openVariableTip(event.currentTarget, variable.id, variableKindHints[variable.kind], false);
+                  }}
+                  onPointerUp={(event) => {
+                    if (editable || event.pointerType !== 'touch') return;
+                    if (variableTip?.id === variable.id) closeVariableTip();
+                    else openVariableTip(event.currentTarget, variable.id, variableKindHints[variable.kind], false);
+                  }}
+                  onBlur={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) closeVariableTip();
+                  }}
                 >
+                  <span className="variable-kind-marker" aria-hidden="true">
+                    {variable.kind === 'split-positive' ? '+' : variable.kind === 'split-negative' ? '−' : ''}
+                  </span>
+                  {/* The edit-mode selector already states the type; a second
+                      hint there is redundant and can be clipped by the editor. */}
                   {editable ? (
                     <div className="header-editor">
                       <input
@@ -115,9 +192,11 @@ export function TableauGrid({
                             next.variables[columnIndex].kind = event.target.value as VariableKind;
                           })}
                         >
-                          <option value="regular">{t('Regular')}</option>
+                          <option value="regular">{t('Original')}</option>
                           <option value="slack">{t('Slack')}</option>
                           <option value="artificial">{t('Artificial')}</option>
+                          <option value="split-positive">{t('Split (+)')}</option>
+                          <option value="split-negative">{t('Split (−)')}</option>
                         </select>
                         <button
                           className="icon-button tiny danger-quiet"
@@ -182,18 +261,13 @@ export function TableauGrid({
                   const selected = selection?.rowId === row.id && selection.variableId === variable.id;
                   const marked = pivotMark?.rowId === row.id && pivotMark.variableId === variable.id;
                   const isHoveredCell = hovered?.row === rowIndex && hovered.column === columnIndex;
-                  const ratio = isHoveredCell ? ratioAt(tableau, rowIndex, columnIndex, algorithm) : null;
-                  const numerator = algorithm === 'primal'
-                    ? row.values[tableau.variables.length]
-                    : tableau.objective[columnIndex];
-                  const isMinimum = minimumRatio && selectedColumn === columnIndex && value.isPositive()
-                    && numerator.div(value).equals(minimumRatio);
                   const classes = [
                     selected ? 'selected-pivot' : '',
                     marked ? 'historic-pivot' : '',
                     hovered?.column === columnIndex ? 'column-hover' : '',
                     selectedColumn === columnIndex ? 'selected-column' : '',
-                    isMinimum ? 'minimum-ratio' : '',
+                    minimumRow === rowIndex && selectedColumn === columnIndex ? 'minimum-ratio' : '',
+                    maximumColumn === columnIndex && selectedRow === rowIndex ? 'maximum-ratio' : '',
                     isHoveredCell ? 'hovered-pivot-cell' : '',
                   ].filter(Boolean).join(' ');
                   return (
@@ -208,8 +282,8 @@ export function TableauGrid({
                           gridColumn={columnIndex}
                           onCommit={(number) => update((next) => { next.rows[rowIndex].values[columnIndex] = number; })}
                         />
-                      ) : !onPivot ? (
-                        <NumberValue value={value} display={display} />
+                      ) : compact || !onPivot ? (
+                        <span className="tableau-number-slot"><NumberValue value={value} display={display} alignMagnitude /></span>
                       ) : (
                         <button
                           type="button"
@@ -234,20 +308,7 @@ export function TableauGrid({
                             onHoverPivot?.(null);
                           }}
                         >
-                          <NumberValue value={value} display={display} />
-                          {showPivotHints && ratio && (
-                            <span className="pivot-ratio-tooltip" role="tooltip">
-                              <span className="pivot-ratio-name">{algorithm === 'primal' ? t('RHS') : <>c<sub>{columnIndex + 1}</sub></>} / a<sub>{rowIndex + 1},{columnIndex + 1}</sub></span>
-                              <span className="pivot-ratio-calculation">
-                                <NumberValue value={numerator} display={display} />
-                                <span>÷</span>
-                                <NumberValue value={value} display={display} />
-                                <span>=</span>
-                                <strong><NumberValue value={ratio} display={display} /></strong>
-                              </span>
-                              <small>{t('Click to pivot immediately')}</small>
-                            </span>
-                          )}
+                          <NumberValue value={value} display={display} alignMagnitude />
                         </button>
                       )}
                     </td>
@@ -265,7 +326,7 @@ export function TableauGrid({
                       onCommit={(number) => update((next) => { next.rows[rowIndex].values[tableau.variables.length] = number; })}
                     />
                   ) : (
-                    <NumberValue value={row.values[tableau.variables.length]} display={display} />
+                    <span className="tableau-number-slot"><NumberValue value={row.values[tableau.variables.length]} display={display} alignMagnitude /></span>
                   )}
                 </td>
               </tr>
@@ -295,7 +356,7 @@ export function TableauGrid({
                     gridColumn={columnIndex}
                     onCommit={(number) => update((next) => { next.objective[columnIndex] = number; })}
                   />
-                ) : <NumberValue value={value} display={display} />}
+                ) : <span className="tableau-number-slot"><NumberValue value={value} display={display} alignMagnitude /></span>}
               </td>
             ))}
             <td className="objective-rhs sticky-right">
@@ -309,11 +370,20 @@ export function TableauGrid({
                   gridColumn={tableau.variables.length}
                   onCommit={(number) => update((next) => { next.objective[next.variables.length] = number; })}
                 />
-              ) : <NumberValue value={tableau.objective[tableau.variables.length]} display={display} />}
+              ) : <span className="tableau-number-slot"><NumberValue value={tableau.objective[tableau.variables.length]} display={display} alignMagnitude /></span>}
             </td>
           </tr>
         </tfoot>
       </table>
+      {variableTip && createPortal(
+        <span
+          id={`variable-kind-tip-${variableTip.id}`}
+          className="control-tooltip variable-kind-tooltip variable-kind-tooltip-portal"
+          role="tooltip"
+          style={{ left: variableTip.left, top: variableTip.top }}
+        >{variableTip.text}</span>,
+        document.body,
+      )}
     </div>
   );
 }

@@ -5,20 +5,28 @@ import { useLanguage } from '../app/languageContext';
 interface NumberValueProps {
   value: Rational;
   display: NumberDisplay;
+  alignMagnitude?: boolean;
 }
 
-export function NumberValue({ value, display }: NumberValueProps) {
+export function NumberValue({ value, display, alignMagnitude = false }: NumberValueProps) {
   const { language } = useLanguage();
   if (display.mode === 'decimal' || value.denominator === 1n) {
-    const formatted = formatRational(value, display);
-    return <span className="number-value integer-value">{language === 'ru' ? formatted.replace('.', ',') : formatted}</span>;
+    const text = formatRational(value, display);
+    const formatted = language === 'ru' ? text.replace('.', ',') : text;
+    const negative = formatted.startsWith('-');
+    return (
+      <span className={`number-value integer-value ${alignMagnitude ? 'aligned-number-value' : 'inline-number-value'}`} aria-label={formatted}>
+        {negative && <span className="number-sign negative" aria-hidden="true" />}
+        <span className="number-magnitude">{negative ? formatted.slice(1) : formatted}</span>
+      </span>
+    );
   }
   const negative = value.numerator < 0n;
   const numerator = negative ? -value.numerator : value.numerator;
   return (
-    <span className="number-value fraction-value" aria-label={value.toFraction()}>
-      {negative && <span className="fraction-sign" aria-hidden="true" />}
-      <span className="fraction-stack">
+    <span className={`number-value fraction-value ${alignMagnitude ? 'aligned-number-value' : 'inline-number-value'}`} aria-label={value.toFraction()}>
+      {negative && <span className="number-sign negative" aria-hidden="true" />}
+      <span className="number-magnitude fraction-stack">
         <span>{numerator.toString()}</span>
         <span>{value.denominator.toString()}</span>
       </span>

@@ -2,7 +2,7 @@ import { useLanguage } from '../app/languageContext';
 import type { ReactNode } from 'react';
 import type { NumberDisplay } from '../math/rational';
 import type { Algorithm, PivotSelection, Tableau } from '../model/tableau';
-import { minimumEligibleRow, ratioAt } from '../model/tableau';
+import { maximumEligibleColumn, minimumEligibleRow, ratioAt } from '../model/tableau';
 import { CheckIcon, InfoIcon, PlusIcon, SparkIcon } from './Icons';
 import { NumberValue } from './NumberValue';
 import { VariableName } from './VariableName';
@@ -106,10 +106,17 @@ export function PivotInspector({
   const value = row && columnIndex >= 0 ? row.values[columnIndex] : null;
   const ratio = row && variable ? ratioAt(tableau, rowIndex, columnIndex, algorithm) : null;
   const rhs = row ? row.values[tableau.variables.length] : null;
+  const objectiveCoefficient = columnIndex >= 0 ? tableau.objective[columnIndex] : null;
   const leaving = row ? tableau.variables.find((candidate) => candidate.id === row.basisId) : null;
-  const recommendedRow = showPivotHints && algorithm === 'primal' && columnIndex >= 0 ? minimumEligibleRow(tableau, columnIndex) : null;
+  const recommendedRow = columnIndex >= 0 ? minimumEligibleRow(tableau, columnIndex) : null;
+  const recommendedColumn = rowIndex >= 0 ? maximumEligibleColumn(tableau, rowIndex) : null;
   const primalEligible = Boolean(value?.isPositive() && ratio && !ratio.isNegative());
-  const isMinimum = recommendedRow !== null && primalEligible && ratio!.equals(ratioAt(tableau, recommendedRow, columnIndex, algorithm)!);
+  const dualEligible = Boolean(rhs?.isNegative() && value?.isNegative() && objectiveCoefficient && !objectiveCoefficient.isNegative());
+  const isRecommended = showPivotHints && (
+    algorithm === 'primal'
+      ? primalEligible && recommendedRow === rowIndex
+      : dualEligible && recommendedColumn === columnIndex
+  );
 
   return (
     <aside className="inspector-card pivot-inspector">
@@ -150,11 +157,11 @@ export function PivotInspector({
           <section className="ratio-formula-card">
             <div className="ratio-label">
               <span>{t(algorithm === 'primal' ? 'Primal ratio' : 'Dual ratio')}</span>
-              {isMinimum && <span className="status-badge green"><CheckIcon /> {t('minimum')}</span>}
+              {isRecommended && <span className="status-badge green"><CheckIcon /> {t(algorithm === 'primal' ? 'minimum' : 'maximum')}</span>}
             </div>
             <div className="ratio-equation">
               <span className="ratio-fraction">
-                <span>{t(algorithm === 'primal' ? 'RHS' : 'objective coefficient')}</span>
+                <span>{algorithm === 'primal' ? t('RHS') : <>c<sub>{columnIndex + 1}</sub></>}</span>
                 <span>a<sub>{rowIndex + 1},{columnIndex + 1}</sub></span>
               </span>
               <span>=</span>
@@ -168,6 +175,9 @@ export function PivotInspector({
             {showPivotHints && algorithm === 'primal' && !primalEligible && (
               <p className="ratio-warning">{t('This entry is not eligible for the usual nonnegative primal ratio test.')}</p>
             )}
+            {showPivotHints && algorithm === 'dual' && !dualEligible && (
+              <p className="ratio-warning">{t('The dual ratio test requires a negative RHS and row entry with a nonnegative objective coefficient.')}</p>
+            )}
           </section>
 
           <p className="operation-note">{t('The pivot divides its row by {value}, then eliminates the pivot column from the other constraint rows and the objective row.', { value: value.toFraction() })}</p>
@@ -175,8 +185,8 @@ export function PivotInspector({
       )}
 
       <div className="quiet-note algorithm-note"><InfoIcon /><span>{t(algorithm === 'primal'
-        ? 'In primal mode, compare RHS / aᵢⱼ down the entering column to choose a leaving row.'
-        : 'In dual mode, compare cⱼ / aᵢⱼ across the leaving row to choose an entering column.')}</span></div>
+        ? 'In primal mode, the inspector shows RHS / aᵢⱼ and marks the minimum eligible ratio in the entering column.'
+        : 'In dual mode, the inspector shows cⱼ / aᵢⱼ and marks the maximum eligible ratio in the leaving row.')}</span></div>
       <div id="pivot-result">{result}</div>
     </aside>
   );

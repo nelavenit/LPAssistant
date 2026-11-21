@@ -1,6 +1,6 @@
 import type { NumberDisplay } from '../math/rational';
 import { formatRational, Rational } from '../math/rational';
-import { analyzeTableau, type Tableau, type TableauAnalysis, type TableauVariable } from './tableau';
+import { analyzeTableau, isDecisionVariableKind, type Tableau, type TableauAnalysis, type TableauVariable } from './tableau';
 import { translate, type Language } from '../app/i18n';
 
 export interface SolutionResultValue {
@@ -28,7 +28,7 @@ export const analysisMessages: Record<TableauAnalysis, string> = {
 export function getSolutionResult(tableau: Tableau): SolutionResult {
   const rhsIndex = tableau.variables.length;
   const values = tableau.variables
-    .filter((variable) => variable.kind === 'regular')
+    .filter((variable) => isDecisionVariableKind(variable.kind))
     .map((variable): SolutionResultValue => {
       const basicRow = tableau.rows.find((row) => row.basisId === variable.id);
       return {

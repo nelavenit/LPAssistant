@@ -4,7 +4,7 @@ import { analysisMessages, formatSolutionResult, getSolutionResult } from './res
 import { AppError, tableauTitle, translate, type Language, type Translate } from '../app/i18n';
 import { groupTableauStages } from './stages';
 import type { HistoryEntry, PivotRecord, StoredObjective, Tableau, TableauRow, TableauVariable } from './tableau';
-import { analyzeTableau, assertTableauShape, describeHistoryEntry, makeId } from './tableau';
+import { analyzeTableau, assertTableauShape, describeHistoryEntry, isVariableKind, makeId } from './tableau';
 
 export interface PivotLabProject {
   format: 'pivotlab-project';
@@ -88,7 +88,7 @@ function tableauFromUnknown(value: Record<string, unknown>): Tableau {
       throw new AppError("Variable {column} is malformed.", { column: index + 1 });
     }
     const kind = candidate.kind;
-    if (kind !== 'regular' && kind !== 'slack' && kind !== 'artificial') {
+    if (!isVariableKind(kind)) {
       throw new AppError("Variable {column} has an unknown kind.", { column: index + 1 });
     }
     return { id: candidate.id, name: candidate.name, kind };

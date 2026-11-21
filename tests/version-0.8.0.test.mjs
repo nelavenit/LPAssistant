@@ -163,12 +163,12 @@ test('light and dark theme tokens, inspector art, controls, and print frames ret
     readFile(new URL('../README.md', import.meta.url), 'utf8'),
   ]);
 
-  assert.match(app, /<span className="display-fraction-sample" aria-label=\{t\(["']Fractions["']\)\}>1\/2<\/span>/);
+  assert.match(app, /<span className="display-fraction-sample" aria-label=\{t\(["']Fractions["']\)\}>1 2<\/span>/);
   assert.doesNotMatch(app, /display-fraction-slash/);
   assert.match(variableName, /className="variable-name"/);
   assert.match(inspector, /var\(--pivot-icon-field\)/);
   assert.match(inspector, /M140 110v16/);
-  assert.match(css, /:root\[data-theme="dark"\][\s\S]*--bg: #111111;[\s\S]*--brand: #e7e7e7;/);
+  assert.match(css, /:root\[data-theme="dark"\][\s\S]*--bg: #111111;[\s\S]*--brand: #3fb950;/);
   assert.doesNotMatch(css.match(/:root\[data-theme="dark"\] \{([\s\S]*?)\n\}/)?.[1] ?? '', /#(?:63c3a1|193c30|304039|485c52)/i);
   assert.ok(contrast('#111111', '#f2f2f2') > 15);
   assert.doesNotMatch(grid, /row-actions-cell|row-actions-column/);
@@ -177,8 +177,8 @@ test('light and dark theme tokens, inspector art, controls, and print frames ret
   assert.match(modal, /Restore appearance defaults/);
   assert.match(modal, /Restore shortcut defaults/);
   assert.doesNotMatch(modal, /eyebrow="Start fresh"/);
-  assert.match(css, /\.solution-stage-tableaux \{ display: block; border: 1px solid #777;/);
-  assert.match(css, /height: 7\.5mm; padding: 1\.2mm;/);
+  assert.match(css, /\.solution-stage-tableaux \{ display: block; border: 1\.5pt solid #777;/);
+  assert.match(css, /height: 5\.4mm; padding: \.65mm;/);
   assert.doesNotMatch(readme, /clearly named|tableau-only scrolling|persistent Pivot Inspector/i);
 });
 

@@ -12,6 +12,7 @@ Enter the problem as a simplex tableau with equality constraints and nonnegative
 
 - arbitrary numbers of constraint rows and variable columns;
 - direct editing of the initial tableau's coefficients, RHS values, variable names, variable types, and basis, with spreadsheet-style arrow-key navigation;
+- unrestricted-variable splitting with distinct positive and negative parts;
 - exact arbitrary-precision rational arithmetic;
 - automatic primal simplex with Bland's rule, Phase I completion, and a record of every pivot;
 - integer, decimal, scientific-notation, and rational-fraction input;
@@ -22,6 +23,7 @@ Enter the problem as a simplex tableau with equality constraints and nonnegative
 - a Simplex Method Tableau with separate Initial problem, Phase I, and Phase II groups when artificial variables change its columns;
 - marked pivots plus undo and redo for tableau editing and pivot steps;
 - project save/open, local autosave, and locally stored previous-problem history;
+- a curated example library covering Phase I, cycling, pivot-rule comparisons, primal/dual size tradeoffs, degeneracy, alternate optima, unboundedness, and infeasibility;
 - LaTeX, Markdown, CSV, PDF, PNG, transparent PNG, and SVG export for either the initial problem or the complete solution;
 - English and Russian interfaces with automatic browser language selection, remappable keyboard shortcuts, and light/dark themes;
 - a touch layout with horizontal table scrolling and a separate confirmation for each pivot;

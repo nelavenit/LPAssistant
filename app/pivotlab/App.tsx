@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { AppError, errorText, resolveLanguage, safeFilename, tableauTitle, translate } from './app/i18n';
+import { AppError, errorText, resolveLanguage, tableauTitle, translate } from './app/i18n';
 import { LanguageContext } from './app/languageContext';
 import { loadSettings, shortcutFromEvent, type AppSettings, type ShortcutAction } from './app/settings';
 import type { NumberDisplay } from './math/rational';
@@ -12,7 +12,6 @@ import {
   analyzeTableau,
   canonicalizeObjective,
   createBlankTableau,
-  createTextbookExample,
   detectBasis,
   describeHistoryEntry,
   finishPhaseOne,
@@ -29,6 +28,8 @@ import {
 } from './model/tableau';
 import { deserializeProject, serializeProject } from './model/project';
 import { groupTableauStages } from './model/stages';
+import { createExampleProblem } from './model/examples';
+import { safeFileName } from './export/naming';
 import {
   createProblemHistoryRecord,
   loadProblemHistory,
@@ -69,7 +70,7 @@ function initialSession(): { history: HistoryEntry[]; currentIndex: number } {
   } catch {
     // A clean example is safer than blocking startup on a damaged autosave.
   }
-  const tableau = createTextbookExample();
+  const tableau = createExampleProblem('large-no-phase-one');
   return {
     history: [{ id: makeId('history'), label: 'Initial tableau', tableau }],
     currentIndex: 0,
@@ -224,6 +225,16 @@ export default function App() {
     setMode('edit');
   };
 
+  const renameProblem = (title: string) => {
+    // The title is project metadata, not tableau algebra. Renaming therefore
+    // propagates through every pivot and edit snapshot without discarding work.
+    setHistory((previous) => previous.map((entry) => ({
+      ...entry,
+      tableau: { ...entry.tableau, title },
+    })));
+    setEditHistory((previous) => previous.map((tableau) => ({ ...tableau, title })));
+  };
+
   const safely = (operation: () => void) => {
     try { operation(); } catch (caught) { showNotice(errorText(t, caught, 'The operation could not be completed.')); }
   };
@@ -311,7 +322,7 @@ export default function App() {
   };
 
   const saveProject = () => {
-    downloadText(`${safeFilename(tableauTitle(t, current.title))}.simplex-assistant.json`, serializeProject(history, currentIndex));
+    downloadText(`${safeFileName(tableauTitle(t, current.title))}.simplex-assistant.json`, serializeProject(history, currentIndex));
     showNotice(t('Project saved.'));
   };
 
@@ -422,23 +433,18 @@ export default function App() {
 
   return (
     <LanguageContext.Provider value={locale}>
-      <div className={`app-shell${view === 'workspace' ? ' workspace-open' : ''}${mode === 'edit' ? ' editing' : ''}`}>
+      <div className={`app-shell${view === 'workspace' ? ' workspace-open' : ''}`}>
         <header className="topbar">
           <div className="brand-block">
             <div className="brand-mark"><GridIcon /></div>
             <div><strong>Simplex Assistant</strong><span>{t('Simplex tableau practice')}</span></div>
           </div>
           <div className="document-title">
-            {mode === 'edit' ? (
-              <input
-                value={tableauTitle(t, current.title)}
-                aria-label={t('Tableau title')}
-                onChange={(event) => {
-                  const next = { ...current, title: event.target.value };
-                  replaceCurrent(next);
-                }}
-              />
-            ) : <strong>{tableauTitle(t, current.title)}</strong>}
+            <input
+              value={tableauTitle(t, current.title)}
+              aria-label={t('Problem name')}
+              onChange={(event) => renameProblem(event.target.value)}
+            />
             <span>{t('saved locally')}</span>
           </div>
           <div className="topbar-actions">
@@ -490,7 +496,7 @@ export default function App() {
             <span>{t('Display')}</span>
             <div className="segmented-control compact-control">
               <button type="button" className={numberMode === 'fraction' ? 'active' : ''} onClick={() => setDisplay({ mode: 'fraction' })}>
-                <span className="display-fraction-sample" aria-label={t('Fractions')}>1/2</span>
+                <span className="display-fraction-sample" aria-label={t('Fractions')}>1 2</span>
               </button>
               <button type="button" className={numberMode === 'decimal' ? 'active' : ''} onClick={() => setDisplay({ mode: 'decimal', precision: display.mode === 'decimal' ? display.precision : 3 })} aria-label={t('Decimals')}>{language === 'ru' ? '0,50' : '0.50'}</button>
             </div>
@@ -501,9 +507,9 @@ export default function App() {
             </span>
           </div>
           <div className="undo-controls">
-            <button className="icon-button" type="button" disabled={mode === 'edit' ? editIndex === 0 : currentIndex === 0} onClick={previousStep} title={`${t(mode === 'edit' ? 'Undo edit' : 'Previous tableau')} · ${settings.shortcuts.undo}`}><UndoIcon /></button>
+            <button className="icon-button" type="button" disabled={mode === 'edit' ? editIndex === 0 : currentIndex === 0} onClick={previousStep} title={`${t(mode === 'edit' ? 'Undo edit' : 'Previous pivoting step')} · ${settings.shortcuts.undo}`}><UndoIcon /></button>
             <span>{mode === 'edit' ? `${editIndex + 1} / ${editHistory.length}` : `${currentIndex + 1} / ${history.length}`}</span>
-            <button className="icon-button" type="button" disabled={mode === 'edit' ? editIndex === editHistory.length - 1 : currentIndex === history.length - 1} onClick={nextStep} title={`${t(mode === 'edit' ? 'Redo edit' : 'Next tableau')} · ${settings.shortcuts.redo}`}><RedoIcon /></button>
+            <button className="icon-button" type="button" disabled={mode === 'edit' ? editIndex === editHistory.length - 1 : currentIndex === history.length - 1} onClick={nextStep} title={`${t(mode === 'edit' ? 'Redo edit' : 'Next pivoting step')} · ${settings.shortcuts.redo}`}><RedoIcon /></button>
           </div>
         </nav>
 
@@ -570,10 +576,7 @@ export default function App() {
             )}
             <section className="tableau-card">
               <header className="tableau-card-header">
-                <div>
-                  <span className="eyebrow">{t('Simplex method tableau')}</span>
-                  <h1>{tableauTitle(t, current.title)}</h1>
-                </div>
+                <h1>{t('Simplex method tableau')}</h1>
                 <div className="tableau-meta">
                   <span>{t('Constraints: {rows} · Variables: {variables}', { rows: current.rows.length, variables: current.variables.length })}</span>
                   {current.phase === 'phase1' && <span className="status-badge amber">{t('Phase I · −w')}</span>}
@@ -664,7 +667,7 @@ export default function App() {
         {modal === 'new' && <NewProjectModal
           onClose={() => setModal(null)}
           onCreate={(rows, variables, title) => { reset(createBlankTableau(rows, variables, title)); setModal(null); }}
-          onLoadExample={() => { reset(createTextbookExample()); setModal(null); }}
+          onLoadExample={(id) => { reset(createExampleProblem(id)); setModal(null); }}
         />}
         {modal === 'phase1' && <PhaseOneModal tableau={current} autoSolve={mode === 'auto'} notice={notice} onClose={() => setModal(null)} onStart={(rowIds) => safely(() => {
           const next = startPhaseOne(current, rowIds);
@@ -694,15 +697,18 @@ export default function App() {
           onClose={() => setModal(null)}
           onNotice={showNotice}
           notice={notice}
-          onPrintHistory={(includeResult, includeSolution) => {
+          onPrintHistory={(includeResult, includeSolution, fileStem) => {
             setIncludePrintResult(includeResult);
             setPrintCompleteSolution(includeSolution);
             setIsPrinting(true);
+            const applicationTitle = document.title;
             window.setTimeout(() => {
               window.addEventListener('afterprint', () => {
+                document.title = applicationTitle;
                 setIncludePrintResult(false);
                 setIsPrinting(false);
               }, { once: true });
+              document.title = fileStem;
               window.print();
             }, 120);
           }}

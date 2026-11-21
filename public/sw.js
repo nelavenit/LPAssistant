@@ -1,6 +1,6 @@
 const scope = new URL(self.registration.scope);
 const prefix = `simplex-assistant:${scope.pathname}:`;
-const cacheName = `${prefix}${self.PAGES_RELEASE?.version ?? 'sites-v14'}`;
+const cacheName = `${prefix}${self.PAGES_RELEASE?.version ?? 'sites-v17'}`;
 const files = new Set(['./', 'manifest.webmanifest', 'icon.svg', ...(self.PAGES_RELEASE?.files ?? [])]
   .map((path) => new URL(path, scope).href));
 

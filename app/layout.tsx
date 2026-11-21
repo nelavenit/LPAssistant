@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Simplex Assistant | LPAssistant",
-  description: "A manual simplex tableau trainer with exact rational arithmetic and Phase I.",
+  description: "Practice the simplex method and solve tableaux with exact arithmetic and Phase I.",
   manifest: "./manifest.webmanifest",
   other: {
     "codex-preview": "development",

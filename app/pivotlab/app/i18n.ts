@@ -1,4 +1,4 @@
-import { russian } from './ru';
+import { russian, russianExampleTitles } from './ru';
 
 export type Language = 'en' | 'ru';
 export type LanguagePreference = 'system' | Language;
@@ -31,9 +31,6 @@ export function errorText(t: Translate, error: unknown, fallback: string): strin
 }
 
 export function tableauTitle(t: Translate, title: string): string {
-  return ['Example 7.4.1', 'Untitled tableau', 'Imported tableau'].includes(title) ? t(title) : title;
-}
-
-export function safeFilename(value: string): string {
-  return value.trim().replace(/[^\p{L}\p{N}._-]+/gu, '-').replace(/^-|-$/g, '') || 'tableau';
+  return ['Example 7.4.1', 'Untitled tableau', 'Imported tableau'].includes(title)
+    || Object.hasOwn(russianExampleTitles, title) ? t(title) : title;
 }

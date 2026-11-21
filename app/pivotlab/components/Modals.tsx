@@ -1,9 +1,11 @@
 import { useLanguage } from '../app/languageContext';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { errorText, safeFilename, tableauTitle } from '../app/i18n';
+import { errorText, tableauTitle } from '../app/i18n';
 import type { AppSettings, ShortcutAction } from '../app/settings';
 import { defaultSettings, shortcutFromEvent, shortcutLabels } from '../app/settings';
 import type { NumberDisplay } from '../math/rational';
+import { exportFileStem } from '../export/naming';
+import { exampleProblems } from '../model/examples';
 import { phaseOneSuggestedRows, type Tableau } from '../model/tableau';
 import {
   exportCsvProject,
@@ -55,7 +57,7 @@ export function Modal({ title, eyebrow, onClose, children, wide = false, notice 
 interface NewProjectModalProps {
   onClose: () => void;
   onCreate: (rows: number, variables: number, title: string) => void;
-  onLoadExample: () => void;
+  onLoadExample: (id: string) => void;
 }
 
 export function NewProjectModal({ onClose, onCreate, onLoadExample }: NewProjectModalProps) {
@@ -64,17 +66,24 @@ export function NewProjectModal({ onClose, onCreate, onLoadExample }: NewProject
   const [variables, setVariables] = useState(5);
   const [title, setTitle] = useState('');
   return (
-    <Modal title={t('New tableau')} onClose={onClose}>
+    <Modal title={t('New tableau')} onClose={onClose} wide>
       <div className="modal-body">
-        <button className="example-card" type="button" onClick={onLoadExample}>
-          <div className="example-icon"><GridIcon /></div>
-          <div><strong>{t('Load textbook example')}</strong><span>{t('Example 7.4.1 · 3 constraints · 7 variables')}</span></div>
-        </button>
-        <div className="or-divider"><span>{t('or create a blank tableau')}</span></div>
-        <label className="field-label">{t('Title')}<input value={title} placeholder={t('Untitled tableau')} onChange={(event) => setTitle(event.target.value)} /></label>
-        <div className="two-column-fields">
-          <label className="field-label">{t('Constraints')}<input type="number" min="1" max="200" value={rows} onChange={(event) => setRows(Number(event.target.value))} /></label>
-          <label className="field-label">{t('Variables')}<input type="number" min="1" max="200" value={variables} onChange={(event) => setVariables(Number(event.target.value))} /></label>
+        <section className="blank-tableau-fields" aria-labelledby="blank-tableau-heading">
+          <h3 className="new-tableau-option-heading" id="blank-tableau-heading">{t('Create a blank tableau')}</h3>
+          <label className="field-label">{t('Title')}<input value={title} placeholder={t('Untitled tableau')} onChange={(event) => setTitle(event.target.value)} /></label>
+          <div className="two-column-fields">
+            <label className="field-label">{t('Constraints')}<input type="number" min="1" max="200" value={rows} onChange={(event) => setRows(Number(event.target.value))} /></label>
+            <label className="field-label">{t('Variables')}<input type="number" min="1" max="200" value={variables} onChange={(event) => setVariables(Number(event.target.value))} /></label>
+          </div>
+        </section>
+        <div className="or-divider"><h3 className="new-tableau-option-heading">{t('Or load an example')}</h3></div>
+        <div className="example-library">
+          {exampleProblems.map((example) => (
+            <button className="example-card" type="button" key={example.id} onClick={() => onLoadExample(example.id)}>
+              <div className="example-icon"><GridIcon /></div>
+              <div><strong>{t(example.title)}</strong><span>{t(example.description)}</span></div>
+            </button>
+          ))}
         </div>
       </div>
       <footer className="modal-footer">
@@ -197,7 +206,7 @@ export function SettingsModal({ settings, onChange, onClose }: SettingsModalProp
           <label className="settings-toggle">
             <input type="checkbox" checked={settings.showPivotHints} onChange={(event) => onChange({ ...settings, showPivotHints: event.target.checked })} />
             <span className="custom-checkbox"><CheckIcon /></span>
-            <span><strong>{t('Show pivot guidance')}</strong><small>{t('Display ratio popovers, minimum markers, and eligibility messages. Primal and dual mode explanations always remain visible.')}</small></span>
+            <span><strong>{t('Show pivot guidance')}</strong><small>{t('Display recommended-pivot markers and eligibility messages. Exact ratios remain available in the pivot inspector.')}</small></span>
           </label>
           <button className="text-button settings-reset" type="button" onClick={() => onChange({
             ...defaultSettings,
@@ -265,7 +274,7 @@ interface ExportModalProps {
   onClose: () => void;
   onNotice: (message: string) => void;
   notice: string | null;
-  onPrintHistory: (includeResult: boolean, includeSolution: boolean) => void;
+  onPrintHistory: (includeResult: boolean, includeSolution: boolean, fileStem: string) => void;
 }
 
 export function ExportModal({
@@ -286,7 +295,7 @@ export function ExportModal({
   const [format, setFormat] = useState<ExportFormat>('latex');
   const [imageExporting, setImageExporting] = useState<'png' | 'transparent-png' | 'svg' | null>(null);
   const exportOptions = { completeSolution: includeSolution, includeResult, language };
-  const filename = safeFilename(tableauTitle(t, tableau.title));
+  const fileStem = exportFileStem(tableauTitle(t, tableau.title), exportOptions);
   const content = format === 'latex'
     ? exportLatexProject(history, currentIndex, display, exportOptions)
     : format === 'markdown'
@@ -313,16 +322,15 @@ export function ExportModal({
         resultTableau: tableau,
         language,
       });
-      const scopeName = includeSolution ? 'complete-solution' : 'initial-problem';
       if (kind === 'svg') {
-        downloadBlob(`${filename}-${scopeName}.svg`, new Blob(
+        downloadBlob(`${fileStem}.svg`, new Blob(
           [graphic.svg],
           { type: 'image/svg+xml;charset=utf-8' },
         ));
       } else {
         const png = await tableauGraphicToPng(graphic);
         downloadBlob(
-          `${filename}-${scopeName}${transparent ? '-no-background' : ''}.png`,
+          `${fileStem}${transparent ? '-no-background' : ''}.png`,
           png,
         );
       }
@@ -336,6 +344,19 @@ export function ExportModal({
   return (
     <Modal title={t('Export')} onClose={onClose} wide notice={notice}>
       <div className="modal-body export-layout">
+        <section className="export-settings-row" aria-label={t('Export options')}>
+          <label className="export-result-toggle">
+            <input type="checkbox" checked={includeSolution} onChange={(event) => onIncludeSolutionChange(event.target.checked)} />
+            <span className="custom-checkbox"><CheckIcon /></span>
+            <span><strong>{t('Export complete solution')}</strong><small>{t('Include every pivoting step through the current one. Turn this off to export only the initial problem.')}</small></span>
+          </label>
+          <label className="export-result-toggle">
+            <input type="checkbox" checked={includeResult} onChange={(event) => onIncludeResultChange(event.target.checked)} />
+            <span className="custom-checkbox"><CheckIcon /></span>
+            <span><strong>{t('Include current result')}</strong><small>{t('Include the current objective value and decision-variable values when the tableau gives a feasible basis.')}</small></span>
+          </label>
+        </section>
+        <div className="export-formats">
         <div className="export-options">
           <div className="format-tabs">
             {(['latex', 'markdown', 'csv'] as const).map((candidate) => (
@@ -345,21 +366,11 @@ export function ExportModal({
           <textarea className="export-preview" readOnly value={content} aria-label={t('Export preview')} onFocus={(event) => event.currentTarget.select()} />
           <div className="button-row">
             <button className="primary-button" type="button" onClick={copy}><CopyIcon /> {t('Copy')}</button>
-            <button className="secondary-button" type="button" onClick={() => downloadText(`${filename}.${extension}`, content)}><SaveIcon /> {t('Download')}</button>
+            <button className="secondary-button" type="button" onClick={() => downloadText(`${fileStem}.${extension}`, content)}><SaveIcon /> {t('Download')}</button>
           </div>
         </div>
         <div className="export-actions-panel">
-          <label className="export-result-toggle">
-            <input type="checkbox" checked={includeSolution} onChange={(event) => onIncludeSolutionChange(event.target.checked)} />
-            <span className="custom-checkbox"><CheckIcon /></span>
-            <span><strong>{t('Export complete solution')}</strong><small>{t('Include every tableau through the current step. Turn this off to export only the initial problem.')}</small></span>
-          </label>
-          <label className="export-result-toggle">
-            <input type="checkbox" checked={includeResult} onChange={(event) => onIncludeResultChange(event.target.checked)} />
-            <span className="custom-checkbox"><CheckIcon /></span>
-            <span><strong>{t('Include current result')}</strong><small>{t('Include the current objective value and decision-variable values when the tableau gives a feasible basis.')}</small></span>
-          </label>
-          <div className="export-action-card"><strong>{t(includeSolution ? 'Complete solution PDF' : 'Initial problem PDF')}</strong><span>{t('Use your browser’s print dialog to print the selected tableaux or save them as a PDF.')}</span><button className="secondary-button" type="button" onClick={() => onPrintHistory(includeResult, includeSolution)}>{t('Print / PDF')}</button></div>
+          <div className="export-action-card"><strong>{t(includeSolution ? 'Complete solution PDF' : 'Initial problem PDF')}</strong><span>{t('Use your browser’s print dialog to print the selected tableaux or save them as a PDF.')}</span><button className="secondary-button" type="button" onClick={() => onPrintHistory(includeResult, includeSolution, fileStem)}>{t('Print / PDF')}</button></div>
           <div className="export-action-card">
             <strong>{t(includeSolution ? 'Complete solution image' : 'Initial problem image')}</strong>
             <span>{t('Export the selected tableaux in the current number format.')}</span>
@@ -369,7 +380,8 @@ export function ExportModal({
               <button className="secondary-button" type="button" disabled={imageExporting !== null} onClick={() => void exportImage('svg')}>{imageExporting === 'svg' ? t('Creating…') : 'SVG'}</button>
             </div>
           </div>
-          <div className="export-action-card"><strong>{t('Editable Simplex Assistant project')}</strong><span>{t(includeSolution ? 'Preserves the complete solution, exact values, and Phase I state.' : 'Saves only the editable initial problem with exact values.')}</span><button className="secondary-button" type="button" onClick={() => downloadText(`${filename}.simplex-assistant.json`, includeSolution ? serializeProject(history, currentIndex) : serializeProject(history.slice(0, 1), 0))}>{t('Save project')}</button></div>
+          <div className="export-action-card"><strong>{t('Editable Simplex Assistant project')}</strong><span>{t(includeSolution ? 'Preserves the complete solution, exact values, and Phase I state.' : 'Saves only the editable initial problem with exact values.')}</span><button className="secondary-button" type="button" onClick={() => downloadText(`${fileStem}.simplex-assistant.json`, includeSolution ? serializeProject(history, currentIndex) : serializeProject(history.slice(0, 1), 0))}>{t('Save project')}</button></div>
+        </div>
         </div>
       </div>
     </Modal>

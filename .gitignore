@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# vinext downloads and compiles transient assets during Sites builds; source commits stay reproducible without them.
+/.vinext/
+
 # misc
 .DS_Store
 *.pem

@@ -20,9 +20,9 @@ test('print pivot rings, stage frames, and compact dimensions are explicit', asy
   const css = await source('../app/globals.css');
   const printCss = css.slice(css.indexOf('@media print'));
   assert.match(printCss, /\.tableau-grid \.selected-pivot, \.tableau-grid \.historic-pivot \{ position: relative !important;/);
-  assert.match(printCss, /\.solution-stage-tableaux \{ display: block; border: 1px solid #777;/);
-  assert.match(printCss, /\.solution-stage-tableaux \.history-card \+ \.history-card \.tableau-scroll \{ border-top: 1px solid #777;/);
-  assert.match(printCss, /height: 7\.5mm; padding: 1\.2mm;/);
+  assert.match(printCss, /\.solution-stage-tableaux \{ display: block; border: 1\.5pt solid #777;/);
+  assert.match(printCss, /\.solution-stage-tableaux \.history-card \+ \.history-card \.tableau-scroll \{ border-top: 1pt solid #777;/);
+  assert.match(printCss, /height: 5\.4mm; padding: \.65mm;/);
   assert.match(printCss, /\.history-card, \.history-card\.current \{ box-shadow: none; border: 0;/);
 });
 
@@ -35,7 +35,7 @@ test('all graphic exports share stage, transparency, and optional-result infrast
   assert.match(modal, /exportImage\('svg'\)/);
   assert.match(modal, /completeSolution: includeSolution/);
   assert.match(graphic, /groupTableauStages/);
-  assert.match(graphic, /const STAGE_GAP = 22/);
+  assert.match(graphic, /const STAGE_GAP = 16/);
   assert.match(graphic, /options\.resultTableau/);
   assert.match(graphic, /canvas\.toBlob/);
 });

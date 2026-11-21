@@ -28,7 +28,7 @@ export function SolutionHistoryView({ history, currentIndex, display, tableFontS
         <div className="history-icon"><HistoryIcon /></div>
         <div>
           <span className="eyebrow">{t('Solution record')}</span>
-          <h2>{t('Tableau history')}</h2>
+          <h2>{t('Pivoting steps')}</h2>
           <p>{t('Every applied pivot extends the Simplex Method Tableau. Print or export the complete solution record.')}</p>
         </div>
       </div>
