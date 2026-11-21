@@ -4,15 +4,16 @@ LPAssistant is an open-ended umbrella project for interactive linear-programming
 
 **Live application:** [Simplex Assistant](https://pivotlab-simplex.valbor2002.chatgpt.site)
 
-## Simplex Assistant 0.8.0
+## Simplex Assistant 0.10.0
 
-Simplex Assistant is deliberately not an automatic solver. The user is able to choose any nonzero pivot; the application performs exactly one pivot transformation and records the resulting tableau.
+Enter the problem as a simplex tableau with equality constraints and nonnegative variables. For a feasible starting basis, assign its unit columns and canonicalize the objective in **Edit**. If a feasible basis is missing, open **Auto-solve → Set up Phase I** and select the rows that need artificial variables. Choose **Solve tableau** or **Start Phase I and solve** to reach the final tableau. The step controls let you review each pivot and phase transition. **Pivot** mode still lets you choose any nonzero pivot manually.
 
 ### Features
 
 - arbitrary numbers of constraint rows and variable columns;
 - direct editing of the initial tableau's coefficients, RHS values, variable names, variable types, and basis, with spreadsheet-style arrow-key navigation;
 - exact arbitrary-precision rational arithmetic;
+- automatic primal simplex with Bland's rule, Phase I completion, and a record of every pivot;
 - integer, decimal, scientific-notation, and rational-fraction input;
 - exact fraction or configurable decimal display;
 - optional primal RHS / a<sub>i,j</sub> and dual c<sub>j</sub> / a<sub>i,j</sub> pivot guidance, disabled by default;
@@ -64,5 +65,7 @@ The Pages build targets Safari on iOS 16.4 or later and Chrome on Android 111 or
 1. Откройте **Новая → Создать таблицу**. Перенесите модель в таблицу: приведите ограничения к равенствам с неотрицательными переменными. Введите коэффициенты целевой функции в соглашении `−f + cᵀx = b₀`. Поддерживаются, например, `−3/7`, `1,25` и `1e−3`.
 2. В режиме **Правка** назначьте базис по единичным столбцам и приведите строку цели к базису. Если нужен искусственный базис, выберите **Подготовить фазу I** и отметьте нужные строки. Когда сумма искусственных переменных станет нулевой, завершите фазу I, чтобы вернуться к исходной целевой функции.
 3. В режиме **Поворот** выбирайте разрешающие элементы вручную. Горизонтальная прокрутка открывает остальные столбцы, а стрелки в панели управления переключают шаги. В **Текущем результате** или **Оптимальном решении** можно проверить допустимость базиса и прочитать значения переменных.
+
+Для автоматического решения откройте **Авторешение → Решить задачу** после подготовки канонической таблицы. Если нужен искусственный базис, выберите **Авторешение → Подготовить фазу I**, отметьте нужные строки и нажмите **Начать фазу I и решить**. Приложение покажет итоговую таблицу. Стрелки в панели управления позволяют просмотреть все повороты и переходы между фазами.
 
 Язык можно сменить в **Настройках**. Автосохранение и история привязаны к адресу сайта и браузеру. Для переноса задачи с прежнего сайта сохраните её в JSON и откройте этот файл на новом адресе. Русскоязычный LaTeX-экспорт требует поддержки кириллицы в используемом редакторе или компиляторе.

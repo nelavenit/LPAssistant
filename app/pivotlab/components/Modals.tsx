@@ -91,12 +91,13 @@ export function NewProjectModal({ onClose, onCreate, onLoadExample }: NewProject
 
 interface PhaseOneModalProps {
   tableau: Tableau;
+  autoSolve: boolean;
   onClose: () => void;
   onStart: (rowIds: string[]) => void;
   notice: string | null;
 }
 
-export function PhaseOneModal({ tableau, onClose, onStart, notice }: PhaseOneModalProps) {
+export function PhaseOneModal({ tableau, autoSolve, onClose, onStart, notice }: PhaseOneModalProps) {
   const { t } = useLanguage();
   const [selected, setSelected] = useState<Set<string>>(() => new Set(phaseOneSuggestedRows(tableau)));
   const hasArtificialVariables = tableau.variables.some((variable) => variable.kind === 'artificial');
@@ -138,11 +139,13 @@ export function PhaseOneModal({ tableau, onClose, onStart, notice }: PhaseOneMod
             );
           })}
         </div>
-        <div className="info-callout"><SparkIcon /><span>{t('Simplex Assistant adds identity columns, makes the new artificial variables basic, and constructs a canonical −w row. Every subsequent pivot is still manual.')} {t('Rows with negative free terms are multiplied by −1 before adding artificial variables.')}</span></div>
+        <div className="info-callout"><SparkIcon /><span>{t(autoSolve
+          ? 'Auto-solve builds the Phase I tableau from these rows and runs both phases when feasible.'
+          : 'Simplex Assistant adds identity columns, makes the new artificial variables basic, and constructs a canonical −w row. Every subsequent pivot is still manual.')} {t('Rows with negative free terms are multiplied by −1 before adding artificial variables.')}</span></div>
       </div>
       <footer className="modal-footer">
         <button className="secondary-button" type="button" onClick={onClose}>{t('Cancel')}</button>
-        <button className="primary-button" type="button" disabled={selected.size === 0 && !hasArtificialVariables} onClick={() => onStart([...selected])}>{t('Start Phase I')}</button>
+        <button className="primary-button" type="button" disabled={selected.size === 0 && !hasArtificialVariables} onClick={() => onStart([...selected])}>{t(autoSolve ? 'Start Phase I and solve' : 'Start Phase I')}</button>
       </footer>
     </Modal>
   );
@@ -203,8 +206,8 @@ export function SettingsModal({ settings, onChange, onClose }: SettingsModalProp
           })}>{t('Restore appearance defaults')}</button>
           <section className="about-simplex-assistant">
             <span className="eyebrow">{t('About')}</span>
-            <h3>Simplex Assistant 0.8.0</h3>
-            <p>{t('This manual simplex-method practice tool keeps every pivot decision yours; only zero entries are forbidden.')}</p>
+            <h3>Simplex Assistant 0.10.0</h3>
+            <p>{t('Choose each pivot in Pivot mode or solve a prepared tableau in Auto-solve mode.')}</p>
             <p>{t('All calculations use arbitrary-precision rational arithmetic.')}</p>
           </section>
         </section>

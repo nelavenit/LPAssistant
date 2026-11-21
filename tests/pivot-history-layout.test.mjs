@@ -10,7 +10,7 @@ test('only committed pivots can mark visible tableaux and headers restart at sta
     source('../app/pivotlab/model/stages.ts'),
   ]);
   assert.match(app, /pivotMark=\{index < currentIndex \? history\[index \+ 1\]\?\.pivot : undefined\}/);
-  assert.match(app, /showHeader=\{stageIndex === 0\}/);
+  assert.match(app, /showHeader=\{mode === 'auto' \|\| stageIndex === 0\}/);
   assert.match(app, /groupTableauStages\(history, currentIndex\)/);
   assert.match(stages, /label: 'Phase I'/);
   assert.match(stages, /label: 'Phase II'/);

@@ -9,11 +9,96 @@ let locale;
 let result;
 let project;
 let rational;
+let autoSolve;
 before(async () => {
   vite = await createServer({ configFile: false, server: { middlewareMode: true }, appType: 'custom', logLevel: 'silent' });
-  [model, locale, result, project, rational] = await Promise.all([
-    'model/tableau', 'app/i18n', 'model/result', 'model/project', 'math/rational',
+  [model, locale, result, project, rational, autoSolve] = await Promise.all([
+    'model/tableau', 'app/i18n', 'model/result', 'model/project', 'math/rational', 'model/autoSolve',
   ].map((module) => vite.ssrLoadModule('/app/pivotlab/' + module + '.ts')));
+});
+
+test('auto-solve uses exact pivots and saves the final tableau and the pivot history', () => {
+  const Q = rational.Rational.parse;
+  const initial = model.createBlankTableau(1, 2);
+  initial.rows[0].values = ['3', '1', '2'].map(Q);
+  initial.rows[0].basisId = initial.variables[1].id;
+  initial.objective = ['-1', '0', '0'].map(Q);
+  const steps = [...autoSolve.autoSolveTableau(initial, 0)];
+  assert.equal(steps.length, 1);
+  assert.equal(steps[0].pivot.pivotValue, '3');
+  assert.equal(steps[0].label, 'Pivot 1: x1 enters');
+  const history = [{ id: 'start', label: 'Initial tableau', tableau: initial }, { id: 'end', ...steps[0] }];
+  const saved = project.deserializeProject(project.serializeProject(history, 1));
+  assert.equal(saved.currentIndex, 1);
+  assert.equal(model.analyzeTableau(saved.history[1].tableau), 'optimal');
+  assert.equal(result.getSolutionResult(saved.history[1].tableau).objectiveValue.toFraction(), '-2/3');
+  assert.equal(initial.rows[0].basisId, initial.variables[1].id);
+});
+
+test('auto-solve uses Bland’s rule for a degenerate ratio tie', () => {
+  const Q = rational.Rational.parse;
+  const initial = model.createBlankTableau(3, 7);
+  initial.rows[0].values = ['1/2', '-3/2', '-1/2', '1', '0', '1', '0', '0'].map(Q);
+  initial.rows[1].values = ['1/2', '-11/2', '-5/2', '9', '1', '0', '0', '0'].map(Q);
+  initial.rows[2].values = ['1', '0', '0', '0', '0', '0', '1', '1'].map(Q);
+  initial.rows.forEach((row, index) => { row.basisId = initial.variables[[5, 4, 6][index]].id; });
+  initial.objective = ['-10', '57', '9', '24', '0', '0', '0', '0'].map(Q);
+  const steps = autoSolve.autoSolveTableau(initial, 0);
+  assert.equal(steps.next().value.pivot.leavingName, 'x5');
+  let next;
+  let final;
+  for (let count = 0; count < 20; count += 1) {
+    next = steps.next();
+    if (next.done) break;
+    final = next.value.tableau;
+  }
+  assert.equal(next.done, true);
+  assert.equal(model.analyzeTableau(final), 'optimal');
+  assert.equal(result.getSolutionResult(final).objectiveValue.toFraction(), '-1');
+});
+
+test('auto-solve requires Phase I setup and restores the original objective before Phase II', () => {
+  const Q = rational.Rational.parse;
+  const initial = model.createBlankTableau(1, 2);
+  initial.rows[0].values = ['2', '1', '4'].map(Q);
+  initial.objective = ['0', '-1', '0'].map(Q);
+  assert.equal(autoSolve.autoSolveState(initial), 'needsPhaseOne');
+  assert.throws(() => autoSolve.autoSolveTableau(initial, 0).next(), /canonical/);
+  const phaseOne = model.startPhaseOne(initial, [initial.rows[0].id]);
+  const steps = [...autoSolve.autoSolveTableau(phaseOne, 1)];
+  assert.deepEqual(steps.map(({ label }) => label), ['Pivot 2: x1 enters', 'Original objective restored', 'Pivot 4: x2 enters']);
+  assert.equal(steps[1].tableau.phase, 'original');
+  assert.equal(steps[1].tableau.variables.length, 2);
+  assert.equal(result.getSolutionResult(steps[2].tableau).objectiveValue.toFraction(), '-4');
+  initial.rows[0].basisId = initial.variables[1].id;
+  assert.equal(autoSolve.autoSolveState(initial), 'needsCanonicalObjective');
+});
+
+test('auto-solve pivots zero-valued artificials out and reports infeasible and unbounded tableaux', () => {
+  const Q = rational.Rational.parse;
+  const initial = model.createBlankTableau(2, 2);
+  initial.rows[0].values = ['-1', '1', '0'].map(Q);
+  initial.objective = ['1', '0', '0'].map(Q);
+  const rows = initial.rows.map(({ id }) => id);
+  const steps = [...autoSolve.autoSolveTableau(model.startPhaseOne(initial, rows), 1)];
+  assert.equal(steps[0].pivot.pivotValue, '-1');
+  assert.equal(steps[1].tableau.rows.length, 1);
+  assert.equal(model.analyzeTableau(steps[1].tableau), 'optimal');
+
+  initial.rows[1].values[2] = Q('1');
+  const infeasible = model.startPhaseOne(initial, rows);
+  const infeasibleSteps = [...autoSolve.autoSolveTableau(infeasible, 1)];
+  assert.equal(infeasibleSteps.length, 1);
+  assert.equal(model.analyzeTableau(infeasibleSteps[0].tableau), 'phaseOneInfeasible');
+  assert.equal(autoSolve.autoSolveState(infeasibleSteps[0].tableau), 'complete');
+
+  const unbounded = model.createBlankTableau(1, 2);
+  unbounded.rows[0].values = ['1', '1', '1'].map(Q);
+  unbounded.rows[0].basisId = unbounded.variables[1].id;
+  unbounded.objective = ['-1', '0', '0'].map(Q);
+  unbounded.rows[0].values[0] = Q('-1');
+  assert.equal(model.analyzeTableau(unbounded), 'unbounded');
+  assert.equal(autoSolve.autoSolveState(unbounded), 'complete');
 });
 after(() => vite?.close());
 

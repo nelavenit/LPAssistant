@@ -5,6 +5,7 @@ import { AppError, errorText, resolveLanguage, safeFilename, tableauTitle, trans
 import { LanguageContext } from './app/languageContext';
 import { loadSettings, shortcutFromEvent, type AppSettings, type ShortcutAction } from './app/settings';
 import type { NumberDisplay } from './math/rational';
+import { autoSolveState, autoSolveTableau } from './model/autoSolve';
 import {
   addConstraint,
   addVariable,
@@ -108,9 +109,11 @@ export default function App() {
   const [includeExportSolution, setIncludeExportSolution] = useState(true);
   const [printCompleteSolution, setPrintCompleteSolution] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
+  const [isSolving, setIsSolving] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const noticeTimer = useRef<number | null>(null);
+  const activeSolve = useRef<AbortController | null>(null);
   const current = history[currentIndex].tableau;
   const canEdit = currentIndex === 0;
   const language = resolveLanguage(settings.language, browserLanguages);
@@ -118,6 +121,7 @@ export default function App() {
   const { t } = locale;
   const activeSelection = selection ?? hoverSelection;
   const analysis = useMemo(() => analyzeTableau(current), [current]);
+  const solveState = useMemo(() => mode === 'auto' ? autoSolveState(current, analysis) : null, [mode, current, analysis]);
   const clearPivot = () => { setSelection(null); setHoverSelection(null); };
 
   useEffect(() => {
@@ -127,6 +131,7 @@ export default function App() {
   }, []);
 
   useLayoutEffect(() => { document.documentElement.lang = language; }, [language]);
+  useLayoutEffect(() => () => activeSolve.current?.abort(), [history, currentIndex, mode, view]);
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 700px), (max-width: 960px) and (pointer: coarse)');
@@ -190,14 +195,14 @@ export default function App() {
     clearPivot();
   };
 
-  const commit = (tableau: Tableau, label: string, pivot?: HistoryEntry['pivot']) => {
-    const next = [
-      ...history.slice(0, currentIndex + 1),
-      { id: makeId('history'), label, tableau, pivot },
-    ];
+  const appendHistory = (entries: HistoryEntry[]) => {
+    const next = [...history.slice(0, currentIndex + 1), ...entries];
     setHistory(next);
     setCurrentIndex(next.length - 1);
     clearPivot();
+  };
+  const commit = (tableau: Tableau, label: string, pivot?: HistoryEntry['pivot']) => {
+    appendHistory([{ id: makeId('history'), label, tableau, pivot }]);
   };
 
   const archiveCurrentProblem = (excludingId?: string) => {
@@ -234,6 +239,38 @@ export default function App() {
     showNotice(t('Pivot applied exactly at {value}.', { value: result.record.pivotValue }));
   });
 
+  const runAutoSolve = async (phaseOneSetup?: Tableau) => {
+    if (activeSolve.current) return;
+    const run = new AbortController();
+    activeSolve.current = run;
+    setIsSolving(true);
+    setNotice(null);
+    const entries: HistoryEntry[] = phaseOneSetup
+      ? [{ id: makeId('history'), label: 'Phase I setup', tableau: phaseOneSetup }]
+      : [];
+    try {
+      const steps = autoSolveTableau(phaseOneSetup ?? current, currentIndex + entries.length);
+      // Yield between batches so touch controls and cancellation stay responsive.
+      let finished = false;
+      while (!finished) {
+        await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+        if (run.signal.aborted) return;
+        const deadline = performance.now() + 12;
+        do {
+          const next = steps.next();
+          finished = Boolean(next.done);
+          if (!next.done) entries.push({ id: makeId('history'), ...next.value });
+        } while (!finished && performance.now() < deadline);
+      }
+      if (entries.length > 0) appendHistory(entries);
+    } catch (caught) {
+      showNotice(errorText(t, caught, 'The operation could not be completed.'));
+    } finally {
+      activeSolve.current = null;
+      setIsSolving(false);
+    }
+  };
+
   const previousStep = () => {
     if (mode === 'edit' && canEdit) {
       if (editIndex <= 0) return;
@@ -259,7 +296,6 @@ export default function App() {
       return;
     }
     if (currentIndex >= history.length - 1) return;
-    setMode('pivot');
     setCurrentIndex((index) => index + 1);
     clearPivot();
   };
@@ -289,7 +325,7 @@ export default function App() {
         enterEditMode();
       }
     },
-    applyPivot: () => applyPivot(),
+    applyPivot: () => { if (mode !== 'auto') applyPivot(); },
     undo: previousStep,
     redo: nextStep,
     newProject: () => setModal('new'),
@@ -380,6 +416,7 @@ export default function App() {
 
   const numberMode = display.mode;
   const tableauStages = useMemo(() => groupTableauStages(history, currentIndex), [history, currentIndex]);
+  const currentTableauOnly = compactLayout || mode === 'auto';
   const selectedRow = selection ? current.rows.findIndex((row) => row.id === selection.rowId) : -1;
   const selectedColumn = selection ? current.variables.findIndex((variable) => variable.id === selection.variableId) : -1;
 
@@ -389,7 +426,7 @@ export default function App() {
         <header className="topbar">
           <div className="brand-block">
             <div className="brand-mark"><GridIcon /></div>
-            <div><strong>Simplex Assistant</strong><span>{t('Manual pivot practice')}</span></div>
+            <div><strong>Simplex Assistant</strong><span>{t('Simplex tableau practice')}</span></div>
           </div>
           <div className="document-title">
             {mode === 'edit' ? (
@@ -426,24 +463,28 @@ export default function App() {
               <button
                 type="button"
                 className={mode === 'edit' ? 'active' : ''}
+                aria-pressed={mode === 'edit'}
                 disabled={!canEdit}
                 aria-describedby={canEdit ? undefined : 'edit-disabled-tooltip'}
                 onClick={enterEditMode}
               >{t('Edit')}</button>
               {!canEdit && <span id="edit-disabled-tooltip" className="control-tooltip" role="tooltip">{t('Edit is available only before the first pivot. Return to the initial tableau to change the problem.')}</span>}
             </span>
-            <button type="button" className={mode === 'pivot' ? 'active' : ''} onClick={() => { setMode('pivot'); setView('workspace'); }}>{t('Pivot')}</button>
+            <button type="button" className={mode === 'pivot' ? 'active' : ''} aria-pressed={mode === 'pivot'} onClick={() => { setMode('pivot'); setView('workspace'); }}>{t('Pivot')}</button>
+            <button type="button" className={mode === 'auto' ? 'active' : ''} aria-pressed={mode === 'auto'} onClick={() => { setMode('auto'); setView('workspace'); clearPivot(); }}>{t('Auto-solve')}</button>
           </div>
           <div className="command-divider" />
           <div className="segmented-control view-control" aria-label={t('View')}>
             <button type="button" className={view === 'workspace' ? 'active' : ''} onClick={() => setView('workspace')}><GridIcon /> {t('Tableau')}</button>
             <button type="button" className={view === 'history' ? 'active' : ''} onClick={() => setView('history')}><HistoryIcon /> {t('History')} <span className="count-pill">{problemHistory.length}</span></button>
           </div>
-          <div className="command-divider" />
-          <div className="segmented-control compact-control algorithm-control" aria-label={t('Algorithm')}>
-            <button type="button" className={algorithm === 'primal' ? 'active' : ''} onClick={() => { setAlgorithm('primal'); clearPivot(); }}>{t('Primal')}</button>
-            <button type="button" className={algorithm === 'dual' ? 'active' : ''} title={t('Uses c[j] / a[i,j] ratio guidance; the pivot row operation is unchanged')} onClick={() => { setAlgorithm('dual'); clearPivot(); }}>{t('Dual')}</button>
-          </div>
+          {mode !== 'auto' && <>
+            <div className="command-divider" />
+            <div className="segmented-control compact-control algorithm-control" aria-label={t('Algorithm')}>
+              <button type="button" className={algorithm === 'primal' ? 'active' : ''} onClick={() => { setAlgorithm('primal'); clearPivot(); }}>{t('Primal')}</button>
+              <button type="button" className={algorithm === 'dual' ? 'active' : ''} title={t('Uses c[j] / a[i,j] ratio guidance; the pivot row operation is unchanged')} onClick={() => { setAlgorithm('dual'); clearPivot(); }}>{t('Dual')}</button>
+            </div>
+          </>}
           <div className="command-spacer" />
           <div className="display-control">
             <span>{t('Display')}</span>
@@ -467,8 +508,32 @@ export default function App() {
         </nav>
 
         {view === 'workspace' ? (
-          <main className="workspace-layout">
-            {mode === 'edit' && canEdit ? (
+          <main className={`workspace-layout${mode === 'auto' ? ' auto-workspace' : ''}`}>
+            {mode === 'auto' ? (
+              <aside className="inspector-card auto-solve-panel" aria-labelledby="auto-solve-heading">
+                <div className="inspector-heading">
+                  <h2 id="auto-solve-heading">{t('Auto-solve')}</h2>
+                  <div aria-live="polite" aria-atomic="true">
+                    {isSolving ? <p>{t('Solving the tableau…')}</p> : solveState === 'complete'
+                      ? <SolutionResult tableau={current} display={display} analysis={analysis} />
+                      : <p>{t(solveState === 'needsPhaseOne'
+                        ? 'Set up Phase I to obtain a feasible basis, or assign the basis in Edit if unit columns are already available.'
+                        : solveState === 'needsCanonicalObjective'
+                          ? 'Use Canonicalize objective in Edit before solving.'
+                          : solveState === 'invalidPhaseOne'
+                            ? 'Auto-solve needs a canonical Phase I tableau with nonnegative free terms. Check the Phase I setup.'
+                            : 'Choose Solve tableau to run all remaining pivots.')}</p>}
+                  </div>
+                </div>
+                {isSolving ? (
+                  <button className="secondary-button" type="button" onClick={() => activeSolve.current?.abort()}>{t('Cancel')}</button>
+                ) : solveState === 'needsPhaseOne' ? (
+                  <button className="primary-button" type="button" onClick={() => setModal('phase1')}>{t('Set up Phase I')}</button>
+                ) : solveState === 'ready' && (
+                  <button className="primary-button" type="button" onClick={() => void runAutoSolve()}>{t('Solve tableau')}</button>
+                )}
+              </aside>
+            ) : mode === 'edit' && canEdit ? (
               <EditInspector
                 tableau={current}
                 onAddConstraint={() => replaceCurrent(addConstraint(current))}
@@ -516,9 +581,8 @@ export default function App() {
               </header>
               <div className="mobile-tableau-tools">
                 <p>{t('Swipe the table horizontally to see more columns.')}</p>
-                {mode === 'edit'
-                  ? <a href="#tableau-setup">{t('Tableau setup')}</a>
-                  : <a href="#pivot-result">{t('See the current result')}</a>}
+                {mode === 'edit' && <a href="#tableau-setup">{t('Tableau setup')}</a>}
+                {mode === 'pivot' && <a href="#pivot-result">{t('See the current result')}</a>}
                 {mode === 'pivot' && current.phase === 'phase1' && <a href="#phase-one-controls">{t('Phase I controls')}</a>}
               </div>
               {mode === 'pivot' && selectedRow >= 0 && selectedColumn >= 0 && (
@@ -533,13 +597,13 @@ export default function App() {
                 </div>
               )}
               <div className="tableau-sequence">
-                {tableauStages.map((stage) => (!compactLayout || stage.entries.some(({ index }) => index === currentIndex)) && (
+                {tableauStages.map((stage) => (!currentTableauOnly || stage.entries.some(({ index }) => index === currentIndex)) && (
                   <section className="tableau-stage" key={stage.id} aria-label={t(stage.label ?? 'Simplex tableau')}>
                     {stage.label && <header className="tableau-stage-heading"><strong>{t(stage.label)}</strong></header>}
                     <div className="tableau-stage-steps">
                       {stage.entries.map(({ entry, index }, stageIndex) => {
                         const isCurrent = index === currentIndex;
-                        if (compactLayout && !isCurrent) return null;
+                        if (currentTableauOnly && !isCurrent) return null;
                         const stepDescription = describeHistoryEntry(t, entry, index);
                         return (
                           <article
@@ -556,7 +620,7 @@ export default function App() {
                               tableFontSize={settings.tableFontSize}
                               selection={isCurrent ? activeSelection : null}
                               compact={!isCurrent}
-                              showHeader={stageIndex === 0}
+                              showHeader={mode === 'auto' || stageIndex === 0}
                               pivotMark={index < currentIndex ? history[index + 1]?.pivot : undefined}
                               onPivot={isCurrent && mode === 'pivot' ? applyPivot : undefined}
                               onHoverPivot={isCurrent && mode === 'pivot' ? setHoverSelection : undefined}
@@ -602,8 +666,16 @@ export default function App() {
           onCreate={(rows, variables, title) => { reset(createBlankTableau(rows, variables, title)); setModal(null); }}
           onLoadExample={() => { reset(createTextbookExample()); setModal(null); }}
         />}
-        {modal === 'phase1' && <PhaseOneModal tableau={current} notice={notice} onClose={() => setModal(null)} onStart={(rowIds) => safely(() => {
+        {modal === 'phase1' && <PhaseOneModal tableau={current} autoSolve={mode === 'auto'} notice={notice} onClose={() => setModal(null)} onStart={(rowIds) => safely(() => {
           const next = startPhaseOne(current, rowIds);
+          if (mode === 'auto') {
+            if (autoSolveState(next) === 'invalidPhaseOne') {
+              throw new AppError('Select every row that lacks a unit-column basis or has a negative free term.');
+            }
+            setModal(null);
+            void runAutoSolve(next);
+            return;
+          }
           commit(next, 'Phase I setup');
           setMode('pivot');
           setModal(null);

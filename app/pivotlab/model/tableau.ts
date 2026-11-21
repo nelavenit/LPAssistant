@@ -3,7 +3,7 @@ import { AppError, type Translate } from '../app/i18n';
 
 export type VariableKind = 'regular' | 'slack' | 'artificial';
 export type Algorithm = 'primal' | 'dual';
-export type AppMode = 'edit' | 'pivot';
+export type AppMode = 'edit' | 'pivot' | 'auto';
 
 export interface TableauVariable {
   id: string;
