@@ -4,7 +4,7 @@ LPAssistant is an open-ended umbrella project for interactive linear-programming
 
 **Live application:** [Simplex Assistant](https://pivotlab-simplex.valbor2002.chatgpt.site)
 
-## Simplex Assistant 0.10.0
+## Simplex Assistant 0.10.1
 
 Enter the problem as a simplex tableau with equality constraints and nonnegative variables. For a feasible starting basis, assign its unit columns and canonicalize the objective in **Edit**. If a feasible basis is missing, open **Auto-solve → Set up Phase I** and select the rows that need artificial variables. Choose **Solve tableau** or **Start Phase I and solve** to reach the final tableau. The step controls let you review each pivot and phase transition. **Pivot** mode still lets you choose any nonzero pivot manually.
 

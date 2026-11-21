@@ -428,6 +428,7 @@ export default function App() {
   const numberMode = display.mode;
   const tableauStages = useMemo(() => groupTableauStages(history, currentIndex), [history, currentIndex]);
   const currentTableauOnly = compactLayout || mode === 'auto';
+  const autoSolveComplete = solveState === 'complete' && !isSolving;
   const selectedRow = selection ? current.rows.findIndex((row) => row.id === selection.rowId) : -1;
   const selectedColumn = selection ? current.variables.findIndex((variable) => variable.id === selection.variableId) : -1;
 
@@ -514,21 +515,19 @@ export default function App() {
         </nav>
 
         {view === 'workspace' ? (
-          <main className={`workspace-layout${mode === 'auto' ? ' auto-workspace' : ''}`}>
+          <main className={`workspace-layout${autoSolveComplete ? ' auto-complete' : mode === 'auto' ? ' auto-workspace' : ''}`}>
             {mode === 'auto' ? (
-              <aside className="inspector-card auto-solve-panel" aria-labelledby="auto-solve-heading">
+              !autoSolveComplete && <aside className="inspector-card auto-solve-panel" aria-labelledby="auto-solve-heading">
                 <div className="inspector-heading">
                   <h2 id="auto-solve-heading">{t('Auto-solve')}</h2>
                   <div aria-live="polite" aria-atomic="true">
-                    {isSolving ? <p>{t('Solving the tableau…')}</p> : solveState === 'complete'
-                      ? <SolutionResult tableau={current} display={display} analysis={analysis} />
-                      : <p>{t(solveState === 'needsPhaseOne'
-                        ? 'Set up Phase I to obtain a feasible basis, or assign the basis in Edit if unit columns are already available.'
-                        : solveState === 'needsCanonicalObjective'
-                          ? 'Use Canonicalize objective in Edit before solving.'
-                          : solveState === 'invalidPhaseOne'
-                            ? 'Auto-solve needs a canonical Phase I tableau with nonnegative free terms. Check the Phase I setup.'
-                            : 'Choose Solve tableau to run all remaining pivots.')}</p>}
+                    {isSolving ? <p>{t('Solving the tableau…')}</p> : <p>{t(solveState === 'needsPhaseOne'
+                      ? 'Set up Phase I to obtain a feasible basis, or assign the basis in Edit if unit columns are already available.'
+                      : solveState === 'needsCanonicalObjective'
+                        ? 'Use Canonicalize objective in Edit before solving.'
+                        : solveState === 'invalidPhaseOne'
+                          ? 'Auto-solve needs a canonical Phase I tableau with nonnegative free terms. Check the Phase I setup.'
+                          : 'Choose Solve tableau to run all remaining pivots.')}</p>}
                   </div>
                 </div>
                 {isSolving ? (
@@ -575,6 +574,7 @@ export default function App() {
               />
             )}
             <section className="tableau-card">
+              {mode === 'auto' && <span className="visually-hidden" role="status">{autoSolveComplete ? t('Final tableau ready.') : ''}</span>}
               <header className="tableau-card-header">
                 <h1>{t('Simplex method tableau')}</h1>
                 <div className="tableau-meta">

@@ -259,7 +259,7 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 3px s
 .eyebrow { display: block; color: var(--brand); font-size: .72rem; font-weight: 750; letter-spacing: .085em; text-transform: uppercase; margin-bottom: 5px; }
 .inspector-heading h2, .history-intro h2, .modal-header h2 { margin: 0; font-size: 1.25rem; letter-spacing: -.025em; }
 .inspector-heading p, .history-intro p { margin: 7px 0 0; color: var(--muted); font-size: .86rem; line-height: 1.55; }
-.auto-solve-panel .solution-result { margin-top: 10px; padding: 13px; box-shadow: none; background: var(--surface-soft); }
+.workspace-layout.auto-complete { grid-template-columns: minmax(0, 1fr); }
 .auto-solve-panel > button { width: 100%; }
 .dimension-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin: 16px 0; }
 .dimension-summary > div { padding: 11px 7px; border-radius: 10px; text-align: center; background: var(--surface-soft); border: 1px solid var(--line); }

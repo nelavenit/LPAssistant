@@ -51,6 +51,7 @@ export const russian: Record<string, string> = {
   "Choose each pivot in Pivot mode or solve a prepared tableau in Auto-solve mode.": "Выбирайте разрешающие элементы в режиме «Поворот» или решите подготовленную таблицу в режиме «Авторешение».",
   "Solve tableau": "Решить задачу",
   "Solving the tableau…": "Выполняется решение…",
+  "Final tableau ready.": "Итоговая таблица готова.",
   "Choose Solve tableau to run all remaining pivots.": "Нажмите «Решить задачу», чтобы выполнить все оставшиеся повороты.",
   "Set up Phase I to obtain a feasible basis, or assign the basis in Edit if unit columns are already available.": "Подготовьте фазу I для получения допустимого базиса. Если в таблице уже есть подходящие единичные столбцы, назначьте их в режиме «Правка».",
   "Use Canonicalize objective in Edit before solving.": "Приведите строку цели к базису в режиме «Правка», затем запустите решение.",

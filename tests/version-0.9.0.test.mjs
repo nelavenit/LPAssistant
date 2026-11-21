@@ -259,7 +259,7 @@ test('the new-tableau dialog renders the curated example library', async () => {
 
 test('README documents the current release capabilities', async () => {
   const readme = await source('../README.md');
-  assert.match(readme, /Simplex Assistant 0\.10\.0/);
+  assert.match(readme, /Simplex Assistant 0\.10\.1/);
   assert.match(readme, /unrestricted-variable splitting/);
   assert.match(readme, /curated example library/);
   assert.doesNotMatch(readme, /colored variable|green dot|tooltip delay/i);

@@ -182,7 +182,7 @@ test('light and dark theme tokens, inspector art, controls, and print frames ret
   assert.doesNotMatch(readme, /clearly named|tableau-only scrolling|persistent Pivot Inspector/i);
 });
 
-test('release metadata and offline cache identify version 0.10.0', async () => {
+test('release metadata and offline cache identify version 0.10.1', async () => {
   const [pkg, lock, readme, modal, worker] = await Promise.all([
     readFile(new URL('../package.json', import.meta.url), 'utf8'),
     readFile(new URL('../package-lock.json', import.meta.url), 'utf8'),
@@ -190,10 +190,10 @@ test('release metadata and offline cache identify version 0.10.0', async () => {
     readFile(new URL('../app/pivotlab/components/Modals.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../public/sw.js', import.meta.url), 'utf8'),
   ]);
-  assert.match(pkg, /"version": "0\.10\.0"/);
-  assert.match(lock, /"version": "0\.10\.0"/);
-  assert.match(readme, /Simplex Assistant 0\.10\.0/);
-  assert.match(modal, /Simplex Assistant 0\.10\.0/);
+  assert.match(pkg, /"version": "0\.10\.1"/);
+  assert.match(lock, /"version": "0\.10\.1"/);
+  assert.match(readme, /Simplex Assistant 0\.10\.1/);
+  assert.match(modal, /Simplex Assistant 0\.10\.1/);
   assert.match(worker, /PAGES_RELEASE\?\.version/);
 });
 

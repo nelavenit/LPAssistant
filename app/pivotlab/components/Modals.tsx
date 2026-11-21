@@ -215,7 +215,7 @@ export function SettingsModal({ settings, onChange, onClose }: SettingsModalProp
           })}>{t('Restore appearance defaults')}</button>
           <section className="about-simplex-assistant">
             <span className="eyebrow">{t('About')}</span>
-            <h3>Simplex Assistant 0.10.0</h3>
+            <h3>Simplex Assistant 0.10.1</h3>
             <p>{t('Choose each pivot in Pivot mode or solve a prepared tableau in Auto-solve mode.')}</p>
             <p>{t('All calculations use arbitrary-precision rational arithmetic.')}</p>
           </section>
